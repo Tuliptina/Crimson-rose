@@ -14,6 +14,7 @@ from content import (
     ANATOMY_REGIONS, SPECIMENS, SECRETS
 )
 from theatre_3d import get_theatre_3d
+from cabinet_3d import get_cabinet_3d
 
 # =============================================================================
 # PAGE CONFIG
@@ -939,18 +940,21 @@ def render_theatre():
     st.markdown("---")
     
     # Main content tabs
-    tab1, tab2, tab3, tab4 = st.tabs(["🎭 3D Theatre", "📜 The Scene", "🔬 Anatomy", "🗄️ Specimens"])
+    tab1, tab2, tab3, tab4, tab5 = st.tabs(["🎭 3D Theatre", "🧪 Cabinet", "📜 The Scene", "🔬 Anatomy", "🗄️ Specimens"])
     
     with tab1:
         render_3d_theatre(mode, intensity)
     
     with tab2:
-        render_scene(pov, mode, intensity)
+        render_cabinet(mode, intensity)
     
     with tab3:
-        render_anatomy_tab(pov, mode)
+        render_scene(pov, mode, intensity)
     
     with tab4:
+        render_anatomy_tab(pov, mode)
+    
+    with tab5:
         render_specimens_tab(pov, mode)
 
 
@@ -1101,6 +1105,20 @@ def render_3d_theatre(mode: str, intensity: int):
     # Render using components.html for full-screen 3D
     import streamlit.components.v1 as components
     components.html(theatre_html, height=600, scrolling=False)
+
+
+def render_cabinet(mode: str, intensity: int):
+    """Render the interactive medical cabinet."""
+    
+    st.markdown("### The Fitzroy Collection")
+    st.markdown("*A private medical cabinet. What secrets do these bottles hold?*")
+    
+    # Get the cabinet HTML
+    cabinet_html = get_cabinet_3d(mode, intensity)
+    
+    # Render using components.html
+    import streamlit.components.v1 as components
+    components.html(cabinet_html, height=650, scrolling=False)
 
 
 # =============================================================================
