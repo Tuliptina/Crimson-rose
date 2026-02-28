@@ -53,6 +53,7 @@ Experience a fully realized Victorian anatomy theatre in 3D:
 ## ✨ Features
 
 - **🎮 Immersive 3D Theatre** — Full Three.js environment with orbit controls, dynamic lighting, and atmospheric effects
+- **🧪 Interactive Medical Cabinet** — Victorian apothecary collection with 20+ authentic bottles, 2D inspection mode, and hidden secrets
 - **Atmospheric prose narration** that shifts based on POV, visual mode, and intensity
 - **Interactive anatomy diagram** — examine the subject's body, uncover medical and hidden lore
 - **Specimen cabinet** — explore preserved organs, documents, and personal effects
@@ -95,6 +96,7 @@ anatomy-theatre/
 ├── app.py              # Main Streamlit application
 ├── content.py          # All narrative content, specimens, secrets
 ├── theatre_3d.py       # 3D Three.js theatre generator
+├── cabinet_3d.py       # 3D Victorian medical cabinet
 ├── requirements.txt    # Python dependencies
 └── README.md           # This file
 ```
