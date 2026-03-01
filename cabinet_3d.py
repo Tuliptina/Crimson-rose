@@ -10,6 +10,7 @@ Victorian medical cabinet with ALL features:
 - Combination lock puzzle
 - Bottle mixing system
 - Full nightmare mode at Intensity 5
+- UPDATED: 2D bottle shapes now match 3D designs!
 """
 
 def get_cabinet_3d(mode: str = "gaslight", intensity: int = 3) -> str:
@@ -1008,7 +1009,7 @@ document.getElementById('z-addmix').onclick = () => {{
     }}
 }};
 
-// 2D bottle rendering
+// ===== 2D BOTTLE RENDERING - UNIQUE SHAPES MATCHING 3D =====
 function draw2d(b) {{
     const w=zCanvas.width, h=zCanvas.height;
     zCtx.clearRect(0,0,w,h);
@@ -1016,138 +1017,698 @@ function draw2d(b) {{
     zCtx.translate(w/2, h/2);
     if(shaking) zCtx.rotate(Math.sin(wave*3)*0.1);
     
-    const bW=100, bH=250;
+    const glassCol = '#'+b.color.toString(16).padStart(6,'0');
+    const glassColAlpha = glassCol+'99';
+    const liqCol = '#'+b.liquid.toString(16).padStart(6,'0')+'dd';
+    const metalCol = '#c8a030';
     
-    // Glass
-    zCtx.fillStyle = '#'+b.color.toString(16).padStart(6,'0')+'99';
-    zCtx.strokeStyle = '#'+b.color.toString(16).padStart(6,'0');
-    zCtx.lineWidth = 3;
-    zCtx.beginPath();
-    zCtx.roundRect(-bW/2, -bH/2, bW, bH, 12);
-    zCtx.fill(); zCtx.stroke();
-    
-    // Liquid
-    const lh = bH * b.level * 0.85;
-    const ly = bH/2 - lh - 15;
-    zCtx.fillStyle = '#'+b.liquid.toString(16).padStart(6,'0')+'dd';
-    zCtx.beginPath();
-    zCtx.moveTo(-bW/2+12, ly+Math.sin(wave)*5);
-    for(let x=-bW/2+12; x<=bW/2-12; x+=8) zCtx.lineTo(x, ly+Math.sin(wave+x*0.08)*5);
-    zCtx.lineTo(bW/2-12, bH/2-15);
-    zCtx.lineTo(-bW/2+12, bH/2-15);
-    zCtx.closePath(); zCtx.fill();
-    
-    // Animations
-    if(b.anim==='bubble' || b.anim==='swirl') {{
-        for(let i=0; i<5; i++) {{
-            const bx = Math.sin(wave*0.5+i*2)*(bW/3);
-            const by = ly+20+((wave*20+i*30)%(lh-20));
-            zCtx.beginPath();
-            zCtx.arc(bx, by, 3+Math.sin(wave+i)*2, 0, Math.PI*2);
-            zCtx.fillStyle = 'rgba(255,255,255,0.3)';
-            zCtx.fill();
-        }}
-    }}
-    if(b.anim==='pulse') {{
-        zCtx.fillStyle = 'rgba(255,100,100,'+(0.1+Math.sin(wave)*0.1)+')';
-        zCtx.fillRect(-bW/2+5, ly+5, bW-10, lh);
-    }}
-    if(b.anim==='shimmer') {{
-        for(let i=0; i<8; i++) {{
-            const sx = Math.sin(wave+i)*bW/3;
-            const sy = ly+10+i*20;
-            zCtx.beginPath();
-            zCtx.arc(sx, sy, 2, 0, Math.PI*2);
-            zCtx.fillStyle = 'rgba(200,200,220,0.5)';
-            zCtx.fill();
-        }}
-    }}
-    if(b.anim==='sparkle') {{
+    // Helper: draw hexagon path
+    function hexPath(cx, cy, r, ht) {{
+        zCtx.beginPath();
         for(let i=0; i<6; i++) {{
-            if(Math.sin(wave*2+i)>0.7) {{
-                const sx = (Math.random()-0.5)*bW*0.6;
-                const sy = ly+20+Math.random()*lh*0.8;
-                zCtx.beginPath();
-                zCtx.arc(sx, sy, 2, 0, Math.PI*2);
-                zCtx.fillStyle = 'rgba(255,255,255,0.8)';
-                zCtx.fill();
+            const angle = (i/6)*Math.PI*2 - Math.PI/2;
+            const x = cx + r*Math.cos(angle);
+            if(i===0) zCtx.moveTo(x, cy - ht/2);
+            else zCtx.lineTo(x, cy - ht/2);
+        }}
+        for(let i=5; i>=0; i--) {{
+            const angle = (i/6)*Math.PI*2 - Math.PI/2;
+            const x = cx + r*Math.cos(angle);
+            zCtx.lineTo(x, cy + ht/2);
+        }}
+        zCtx.closePath();
+    }}
+    
+    let bW=100, bH=250, neckY=-125, labelY=0, labelW=80, labelH=60;
+    let liquidTop=0, liquidBot=0, liquidW=80;
+    
+    // ===== UNIQUE BOTTLE SHAPES =====
+    
+    if(b.id === 'laudanum') {{
+        // Rectangular amber apothecary with embossed band
+        bW=70; bH=200;
+        zCtx.fillStyle = glassColAlpha;
+        zCtx.strokeStyle = glassCol;
+        zCtx.lineWidth = 3;
+        zCtx.beginPath();
+        zCtx.roundRect(-bW/2, -bH/2, bW, bH, 6);
+        zCtx.fill(); zCtx.stroke();
+        // Embossed band
+        zCtx.fillStyle = metalCol;
+        zCtx.fillRect(-bW/2-2, -20, bW+4, 12);
+        // Neck
+        zCtx.fillStyle = glassColAlpha;
+        zCtx.fillRect(-18, -bH/2-45, 36, 50);
+        zCtx.strokeRect(-18, -bH/2-45, 36, 50);
+        neckY = -bH/2-50;
+        liquidTop = -bH/2+15; liquidBot = bH/2-10; liquidW = bW-12;
+    }}
+    else if(b.id === 'chloroform') {{
+        // Hexagonal blue poison with ridges and skull
+        bW=90; bH=190;
+        zCtx.fillStyle = glassColAlpha;
+        zCtx.strokeStyle = glassCol;
+        zCtx.lineWidth = 3;
+        hexPath(0, 10, 45, bH);
+        zCtx.fill(); zCtx.stroke();
+        // Ridges (poison warning)
+        zCtx.strokeStyle = glassCol;
+        zCtx.lineWidth = 4;
+        for(let i=-2; i<=2; i++) {{
+            zCtx.beginPath();
+            zCtx.moveTo(i*18, -bH/2+20);
+            zCtx.lineTo(i*18, bH/2-10);
+            zCtx.stroke();
+        }}
+        // Skull emboss
+        zCtx.fillStyle = glassCol;
+        zCtx.beginPath();
+        zCtx.arc(0, 30, 18, 0, Math.PI*2);
+        zCtx.fill();
+        zCtx.fillStyle = '#000';
+        zCtx.beginPath();
+        zCtx.arc(-6, 27, 4, 0, Math.PI*2);
+        zCtx.arc(6, 27, 4, 0, Math.PI*2);
+        zCtx.fill();
+        zCtx.beginPath();
+        zCtx.moveTo(-4, 38); zCtx.lineTo(0, 42); zCtx.lineTo(4, 38);
+        zCtx.stroke();
+        // Neck
+        zCtx.fillStyle = glassColAlpha;
+        zCtx.fillRect(-16, -bH/2-40, 32, 45);
+        neckY = -bH/2-45;
+        liquidTop = -bH/2+30; liquidBot = bH/2-5; liquidW = 70;
+        labelY = -50; labelH = 40; labelW = 70;
+    }}
+    else if(b.id === 'soothing') {{
+        // Round cheerful bottle
+        bW=120; bH=160;
+        zCtx.fillStyle = glassColAlpha;
+        zCtx.strokeStyle = glassCol;
+        zCtx.lineWidth = 3;
+        zCtx.beginPath();
+        zCtx.ellipse(0, 20, 60, 80, 0, 0, Math.PI*2);
+        zCtx.fill(); zCtx.stroke();
+        // Neck
+        zCtx.beginPath();
+        zCtx.moveTo(-20, -55); zCtx.lineTo(-14, -100);
+        zCtx.lineTo(14, -100); zCtx.lineTo(20, -55);
+        zCtx.closePath();
+        zCtx.fill(); zCtx.stroke();
+        neckY = -105;
+        liquidTop = -40; liquidBot = 95; liquidW = 100;
+        labelY = 10;
+    }}
+    else if(b.id === 'mercury') {{
+        // Cylindrical with silver bands
+        bW=75; bH=220;
+        zCtx.fillStyle = glassColAlpha;
+        zCtx.strokeStyle = glassCol;
+        zCtx.lineWidth = 3;
+        zCtx.beginPath();
+        zCtx.roundRect(-bW/2, -bH/2, bW, bH, 8);
+        zCtx.fill(); zCtx.stroke();
+        // Silver bands
+        zCtx.fillStyle = metalCol;
+        for(let i=0; i<3; i++) {{
+            zCtx.fillRect(-bW/2-3, -60+i*50, bW+6, 8);
+        }}
+        // Neck
+        zCtx.fillStyle = glassColAlpha;
+        zCtx.fillRect(-16, -bH/2-35, 32, 40);
+        neckY = -bH/2-40;
+        liquidTop = -bH/2+15; liquidBot = bH/2-10; liquidW = bW-14;
+    }}
+    else if(b.id === 'arsenic') {{
+        // Elegant oval perfume-style
+        bW=80; bH=180;
+        zCtx.fillStyle = glassColAlpha;
+        zCtx.strokeStyle = glassCol;
+        zCtx.lineWidth = 3;
+        zCtx.beginPath();
+        zCtx.ellipse(0, 15, 40, 75, 0, 0, Math.PI*2);
+        zCtx.fill(); zCtx.stroke();
+        // Long elegant neck
+        zCtx.beginPath();
+        zCtx.moveTo(-12, -55); zCtx.lineTo(-8, -110);
+        zCtx.lineTo(8, -110); zCtx.lineTo(12, -55);
+        zCtx.closePath();
+        zCtx.fill(); zCtx.stroke();
+        // Decorative glass stopper
+        zCtx.beginPath();
+        zCtx.arc(0, -125, 18, 0, Math.PI*2);
+        zCtx.fill(); zCtx.stroke();
+        neckY = -145;
+        liquidTop = -45; liquidBot = 85; liquidW = 65;
+        labelY = 5; labelH = 50;
+    }}
+    else if(b.id === 'ether') {{
+        // Ribbed brown bottle
+        bW=85; bH=200;
+        zCtx.fillStyle = glassColAlpha;
+        zCtx.strokeStyle = glassCol;
+        zCtx.lineWidth = 3;
+        zCtx.beginPath();
+        zCtx.roundRect(-bW/2, -bH/2, bW, bH, 8);
+        zCtx.fill(); zCtx.stroke();
+        // Vertical ribs
+        zCtx.strokeStyle = glassCol;
+        zCtx.lineWidth = 5;
+        for(let i=-3; i<=3; i++) {{
+            zCtx.beginPath();
+            zCtx.moveTo(i*11, -bH/2+10);
+            zCtx.lineTo(i*11, bH/2-10);
+            zCtx.stroke();
+        }}
+        // Neck
+        zCtx.fillStyle = glassColAlpha;
+        zCtx.lineWidth = 3;
+        zCtx.fillRect(-18, -bH/2-40, 36, 45);
+        zCtx.strokeRect(-18, -bH/2-40, 36, 45);
+        neckY = -bH/2-45;
+        liquidTop = -bH/2+20; liquidBot = bH/2-10; liquidW = bW-18;
+    }}
+    else if(b.id === 'cocaine') {{
+        // Tall thin dropper bottle
+        bW=50; bH=240;
+        zCtx.fillStyle = glassColAlpha;
+        zCtx.strokeStyle = glassCol;
+        zCtx.lineWidth = 3;
+        zCtx.beginPath();
+        zCtx.roundRect(-bW/2, -bH/2, bW, bH, 6);
+        zCtx.fill(); zCtx.stroke();
+        // Thin neck
+        zCtx.fillRect(-10, -bH/2-50, 20, 55);
+        // Rubber dropper top
+        zCtx.fillStyle = '#333';
+        zCtx.fillRect(-14, -bH/2-80, 28, 35);
+        // Rubber bulb
+        zCtx.beginPath();
+        zCtx.arc(0, -bH/2-95, 18, 0, Math.PI*2);
+        zCtx.fill();
+        neckY = -bH/2-115;
+        liquidTop = -bH/2+15; liquidBot = bH/2-10; liquidW = bW-14;
+        labelY = 10; labelW = 45;
+    }}
+    else if(b.id === 'strychnine') {{
+        // Hexagonal red poison with wax seal
+        bW=85; bH=200;
+        zCtx.fillStyle = glassColAlpha;
+        zCtx.strokeStyle = glassCol;
+        zCtx.lineWidth = 3;
+        hexPath(0, 10, 42, bH);
+        zCtx.fill(); zCtx.stroke();
+        // Neck
+        zCtx.fillStyle = glassColAlpha;
+        zCtx.fillRect(-16, -bH/2-35, 32, 40);
+        // Red wax seal
+        zCtx.fillStyle = '#880000';
+        zCtx.beginPath();
+        zCtx.arc(0, -bH/2-45, 22, 0, Math.PI*2);
+        zCtx.fill();
+        zCtx.fillStyle = '#660000';
+        zCtx.font = '12px Georgia';
+        zCtx.textAlign = 'center';
+        zCtx.fillText('☠', 0, -bH/2-40);
+        neckY = -bH/2-50;
+        liquidTop = -bH/2+25; liquidBot = bH/2; liquidW = 68;
+        labelY = -20;
+    }}
+    else if(b.id === 'carbolic') {{
+        // Hospital-style with horizontal ridges
+        bW=75; bH=220;
+        zCtx.fillStyle = glassColAlpha;
+        zCtx.strokeStyle = glassCol;
+        zCtx.lineWidth = 3;
+        zCtx.beginPath();
+        zCtx.roundRect(-bW/2, -bH/2, bW, bH, 8);
+        zCtx.fill(); zCtx.stroke();
+        // Horizontal ridges
+        zCtx.strokeStyle = glassCol;
+        zCtx.lineWidth = 5;
+        for(let i=0; i<5; i++) {{
+            zCtx.beginPath();
+            zCtx.moveTo(-bW/2+5, -70+i*35);
+            zCtx.lineTo(bW/2-5, -70+i*35);
+            zCtx.stroke();
+        }}
+        // Neck
+        zCtx.fillStyle = glassColAlpha;
+        zCtx.lineWidth = 3;
+        zCtx.fillRect(-16, -bH/2-35, 32, 40);
+        neckY = -bH/2-40;
+        liquidTop = -bH/2+20; liquidBot = bH/2-10; liquidW = bW-16;
+    }}
+    else if(b.id === 'embalming') {{
+        // Large wide jug with handle
+        bW=120; bH=230;
+        zCtx.fillStyle = glassColAlpha;
+        zCtx.strokeStyle = glassCol;
+        zCtx.lineWidth = 3;
+        zCtx.beginPath();
+        zCtx.roundRect(-bW/2, -bH/2, bW, bH, 12);
+        zCtx.fill(); zCtx.stroke();
+        // Wide neck
+        zCtx.fillRect(-25, -bH/2-45, 50, 50);
+        zCtx.strokeRect(-25, -bH/2-45, 50, 50);
+        // Handle
+        zCtx.strokeStyle = glassCol;
+        zCtx.lineWidth = 10;
+        zCtx.beginPath();
+        zCtx.arc(bW/2+15, 0, 35, -Math.PI/2, Math.PI/2);
+        zCtx.stroke();
+        neckY = -bH/2-50;
+        liquidTop = -bH/2+20; liquidBot = bH/2-10; liquidW = bW-16;
+        labelW = 100; labelH = 70;
+    }}
+    else if(b.id === 'vita') {{
+        // Ornate teardrop with rose emblem
+        bW=110; bH=200;
+        zCtx.fillStyle = glassColAlpha;
+        zCtx.strokeStyle = glassCol;
+        zCtx.lineWidth = 3;
+        // Teardrop shape
+        zCtx.beginPath();
+        zCtx.moveTo(0, -80);
+        zCtx.bezierCurveTo(-55, -40, -55, 80, 0, 100);
+        zCtx.bezierCurveTo(55, 80, 55, -40, 0, -80);
+        zCtx.fill(); zCtx.stroke();
+        // Long neck
+        zCtx.fillRect(-12, -130, 24, 55);
+        zCtx.strokeRect(-12, -130, 24, 55);
+        // Rose emblem
+        zCtx.fillStyle = '#880000';
+        zCtx.beginPath();
+        zCtx.arc(0, 20, 15, 0, Math.PI*2);
+        zCtx.fill();
+        for(let i=0; i<5; i++) {{
+            const a = (i/5)*Math.PI*2;
+            zCtx.beginPath();
+            zCtx.ellipse(Math.cos(a)*12, 20+Math.sin(a)*12, 8, 5, a, 0, Math.PI*2);
+            zCtx.fill();
+        }}
+        // Ornate cone stopper
+        zCtx.fillStyle = glassCol;
+        zCtx.beginPath();
+        zCtx.moveTo(-15, -130); zCtx.lineTo(0, -160); zCtx.lineTo(15, -130);
+        zCtx.closePath();
+        zCtx.fill(); zCtx.stroke();
+        neckY = -165;
+        liquidTop = -60; liquidBot = 95; liquidW = 80;
+        labelY = -30; labelH = 35; labelW = 60;
+    }}
+    else if(b.id === 'unmarked') {{
+        // Plain hexagonal, no label
+        bW=80; bH=190;
+        zCtx.fillStyle = glassColAlpha;
+        zCtx.strokeStyle = glassCol;
+        zCtx.lineWidth = 3;
+        hexPath(0, 10, 40, bH);
+        zCtx.fill(); zCtx.stroke();
+        // Neck
+        zCtx.fillStyle = glassColAlpha;
+        zCtx.fillRect(-14, -bH/2-35, 28, 40);
+        neckY = -bH/2-40;
+        liquidTop = -bH/2+25; liquidBot = bH/2; liquidW = 65;
+        labelW = 0; // No label!
+    }}
+    else if(b.id === 'unwilling') {{
+        // Black rectangular sinister
+        bW=65; bH=220;
+        zCtx.fillStyle = glassColAlpha;
+        zCtx.strokeStyle = glassCol;
+        zCtx.lineWidth = 3;
+        zCtx.beginPath();
+        zCtx.roundRect(-bW/2, -bH/2, bW, bH, 4);
+        zCtx.fill(); zCtx.stroke();
+        // Neck
+        zCtx.fillRect(-12, -bH/2-40, 24, 45);
+        // Black wax seal
+        zCtx.fillStyle = '#111';
+        zCtx.beginPath();
+        zCtx.arc(0, -bH/2-50, 20, 0, Math.PI*2);
+        zCtx.fill();
+        neckY = -bH/2-55;
+        liquidTop = -bH/2+15; liquidBot = bH/2-10; liquidW = bW-12;
+    }}
+    else if(b.id === 'mercy') {{
+        // Tiny vial with skull stopper
+        bW=40; bH=140;
+        zCtx.fillStyle = glassColAlpha;
+        zCtx.strokeStyle = glassCol;
+        zCtx.lineWidth = 3;
+        zCtx.beginPath();
+        zCtx.roundRect(-bW/2, -bH/2, bW, bH, 6);
+        zCtx.fill(); zCtx.stroke();
+        // Thin neck
+        zCtx.fillRect(-8, -bH/2-30, 16, 35);
+        // Skull stopper
+        zCtx.fillStyle = '#eec';
+        zCtx.beginPath();
+        zCtx.arc(0, -bH/2-50, 18, 0, Math.PI*2);
+        zCtx.fill();
+        zCtx.strokeStyle = '#886';
+        zCtx.stroke();
+        // Skull face
+        zCtx.fillStyle = '#333';
+        zCtx.beginPath();
+        zCtx.arc(-6, -bH/2-53, 4, 0, Math.PI*2);
+        zCtx.arc(6, -bH/2-53, 4, 0, Math.PI*2);
+        zCtx.fill();
+        zCtx.beginPath();
+        zCtx.moveTo(-4, -bH/2-42); zCtx.lineTo(0, -bH/2-38); zCtx.lineTo(4, -bH/2-42);
+        zCtx.stroke();
+        neckY = -bH/2-70;
+        liquidTop = -bH/2+12; liquidBot = bH/2-8; liquidW = bW-12;
+        labelY = 5; labelW = 38; labelH = 45;
+    }}
+    else if(b.id === 'blood_sc') {{
+        // Test tube with rounded bottom
+        bW=35; bH=210;
+        zCtx.fillStyle = glassColAlpha;
+        zCtx.strokeStyle = glassCol;
+        zCtx.lineWidth = 3;
+        // Tube body
+        zCtx.fillRect(-bW/2, -bH/2, bW, bH-20);
+        zCtx.strokeRect(-bW/2, -bH/2, bW, bH-20);
+        // Rounded bottom
+        zCtx.beginPath();
+        zCtx.arc(0, bH/2-20, bW/2, 0, Math.PI);
+        zCtx.fill(); zCtx.stroke();
+        // Lip at top
+        zCtx.fillStyle = glassCol;
+        zCtx.beginPath();
+        zCtx.ellipse(0, -bH/2, bW/2+4, 8, 0, 0, Math.PI*2);
+        zCtx.fill();
+        neckY = -bH/2-10;
+        liquidTop = -bH/2+20; liquidBot = bH/2-5; liquidW = bW-8;
+        labelY = -20; labelW = 32; labelH = 55;
+    }}
+    else if(b.id === 'teeth') {{
+        // Wide mouth specimen jar with screw lid
+        bW=120; bH=170;
+        zCtx.fillStyle = glassColAlpha;
+        zCtx.strokeStyle = glassCol;
+        zCtx.lineWidth = 3;
+        zCtx.beginPath();
+        zCtx.roundRect(-bW/2, -bH/2, bW, bH, 10);
+        zCtx.fill(); zCtx.stroke();
+        // Screw-top metal lid
+        zCtx.fillStyle = metalCol;
+        zCtx.fillRect(-bW/2-5, -bH/2-35, bW+10, 40);
+        // Lid ridges
+        zCtx.strokeStyle = '#8a7020';
+        zCtx.lineWidth = 2;
+        for(let i=0; i<8; i++) {{
+            zCtx.beginPath();
+            zCtx.moveTo(-bW/2+i*16, -bH/2-35);
+            zCtx.lineTo(-bW/2+i*16, -bH/2);
+            zCtx.stroke();
+        }}
+        neckY = -bH/2-40;
+        liquidTop = -bH/2+15; liquidBot = bH/2-10; liquidW = bW-16;
+        labelY = 20; labelW = 90;
+    }}
+    else if(b.id === 'leeches') {{
+        // Rounded jar with domed top
+        bW=110; bH=180;
+        zCtx.fillStyle = glassColAlpha;
+        zCtx.strokeStyle = glassCol;
+        zCtx.lineWidth = 3;
+        zCtx.beginPath();
+        zCtx.roundRect(-bW/2, -bH/2+20, bW, bH-20, 12);
+        zCtx.fill(); zCtx.stroke();
+        // Dome top
+        zCtx.beginPath();
+        zCtx.arc(0, -bH/2+20, bW/2, Math.PI, 0);
+        zCtx.fill(); zCtx.stroke();
+        // Ventilated metal lid
+        zCtx.fillStyle = metalCol;
+        zCtx.beginPath();
+        zCtx.arc(0, -bH/2-15, 35, 0, Math.PI*2);
+        zCtx.fill();
+        // Vent holes
+        zCtx.fillStyle = '#333';
+        for(let i=0; i<5; i++) {{
+            zCtx.beginPath();
+            zCtx.arc(-20+i*10, -bH/2-15, 3, 0, Math.PI*2);
+            zCtx.fill();
+        }}
+        neckY = -bH/2-25;
+        liquidTop = -bH/2+40; liquidBot = bH/2-10; liquidW = bW-18;
+        labelY = 30;
+    }}
+    else if(b.id === 'essence') {{
+        // Ceramic pot (not glass!)
+        bW=100; bH=160;
+        const potCol = '#d4c4a8';
+        zCtx.fillStyle = potCol;
+        zCtx.strokeStyle = '#a89878';
+        zCtx.lineWidth = 3;
+        zCtx.beginPath();
+        zCtx.roundRect(-bW/2, -bH/2, bW, bH, 15);
+        zCtx.fill(); zCtx.stroke();
+        // Decorative rim
+        zCtx.lineWidth = 8;
+        zCtx.beginPath();
+        zCtx.arc(0, -bH/2+5, bW/2+5, Math.PI, 0);
+        zCtx.stroke();
+        // Ceramic lid
+        zCtx.fillStyle = potCol;
+        zCtx.lineWidth = 3;
+        zCtx.fillRect(-bW/2+5, -bH/2-25, bW-10, 30);
+        zCtx.strokeRect(-bW/2+5, -bH/2-25, bW-10, 30);
+        // Lid knob
+        zCtx.beginPath();
+        zCtx.arc(0, -bH/2-35, 12, 0, Math.PI*2);
+        zCtx.fill(); zCtx.stroke();
+        neckY = -bH/2-50;
+        liquidTop = 0; liquidBot = 0; liquidW = 0; // No visible liquid
+        labelY = 20; labelW = 70;
+    }}
+    else if(b.id === 'tapeworm') {{
+        // Tall specimen tube with base stand
+        bW=55; bH=250;
+        zCtx.fillStyle = glassColAlpha;
+        zCtx.strokeStyle = glassCol;
+        zCtx.lineWidth = 3;
+        zCtx.beginPath();
+        zCtx.roundRect(-bW/2, -bH/2, bW, bH-20, 6);
+        zCtx.fill(); zCtx.stroke();
+        // Metal base stand
+        zCtx.fillStyle = metalCol;
+        zCtx.fillRect(-bW/2-10, bH/2-25, bW+20, 30);
+        // Neck
+        zCtx.fillStyle = glassColAlpha;
+        zCtx.fillRect(-14, -bH/2-30, 28, 35);
+        neckY = -bH/2-35;
+        liquidTop = -bH/2+15; liquidBot = bH/2-30; liquidW = bW-14;
+        labelY = -20; labelW = 50;
+    }}
+    else if(b.id === 'brain') {{
+        // Ornate Victorian jar with dome lid
+        bW=110; bH=170;
+        zCtx.fillStyle = glassColAlpha;
+        zCtx.strokeStyle = glassCol;
+        zCtx.lineWidth = 3;
+        zCtx.beginPath();
+        zCtx.roundRect(-bW/2, -bH/2, bW, bH, 12);
+        zCtx.fill(); zCtx.stroke();
+        // Ornate metal band
+        zCtx.fillStyle = metalCol;
+        zCtx.fillRect(-bW/2-3, -10, bW+6, 15);
+        // Decorative dots on band
+        zCtx.fillStyle = '#8a7020';
+        for(let i=0; i<7; i++) {{
+            zCtx.beginPath();
+            zCtx.arc(-bW/2+10+i*15, -3, 3, 0, Math.PI*2);
+            zCtx.fill();
+        }}
+        // Metal dome lid
+        zCtx.fillStyle = metalCol;
+        zCtx.beginPath();
+        zCtx.arc(0, -bH/2, bW/2-5, Math.PI, 0);
+        zCtx.fill();
+        zCtx.strokeStyle = '#8a7020';
+        zCtx.stroke();
+        // Lid knob
+        zCtx.fillRect(-8, -bH/2-45, 16, 30);
+        neckY = -bH/2-50;
+        liquidTop = -bH/2+30; liquidBot = bH/2-10; liquidW = bW-18;
+        labelY = 35; labelW = 85;
+    }}
+    else {{
+        // Default bottle (fallback)
+        bW=85; bH=220;
+        zCtx.fillStyle = glassColAlpha;
+        zCtx.strokeStyle = glassCol;
+        zCtx.lineWidth = 3;
+        zCtx.beginPath();
+        zCtx.roundRect(-bW/2, -bH/2, bW, bH, 10);
+        zCtx.fill(); zCtx.stroke();
+        zCtx.fillRect(-16, -bH/2-40, 32, 45);
+        neckY = -bH/2-45;
+        liquidTop = -bH/2+15; liquidBot = bH/2-10; liquidW = bW-14;
+    }}
+    
+    // ===== LIQUID =====
+    if(liquidW > 0 && b.id !== 'essence') {{
+        const lh = (liquidBot - liquidTop) * b.level;
+        const ly = liquidBot - lh;
+        zCtx.fillStyle = liqCol;
+        zCtx.beginPath();
+        // Wavy top
+        zCtx.moveTo(-liquidW/2, ly + Math.sin(wave)*4);
+        for(let x = -liquidW/2; x <= liquidW/2; x += 8) {{
+            zCtx.lineTo(x, ly + Math.sin(wave + x*0.1)*4);
+        }}
+        zCtx.lineTo(liquidW/2, liquidBot);
+        zCtx.lineTo(-liquidW/2, liquidBot);
+        zCtx.closePath();
+        zCtx.fill();
+        
+        // ===== ANIMATIONS =====
+        const animLh = lh, animLy = ly;
+        
+        if(b.anim==='bubble' || b.anim==='swirl') {{
+            for(let i=0; i<5; i++) {{
+                const bx = Math.sin(wave*0.5+i*2)*(liquidW/3);
+                const by = animLy+20+((wave*20+i*30)%(animLh-20));
+                if(by > animLy && by < liquidBot-5) {{
+                    zCtx.beginPath();
+                    zCtx.arc(bx, by, 3+Math.sin(wave+i)*2, 0, Math.PI*2);
+                    zCtx.fillStyle = 'rgba(255,255,255,0.3)';
+                    zCtx.fill();
+                }}
             }}
         }}
-    }}
-    if(b.special==='leeches') {{
-        zCtx.fillStyle = '#2a3a2a';
-        for(let i=0; i<5; i++) {{
-            const lx = Math.sin(wave*0.4+i*2)*30;
-            const leechY = ly+30+i*25+Math.cos(wave*0.3+i)*10;
-            zCtx.beginPath();
-            zCtx.ellipse(lx, leechY, 12, 6, Math.sin(wave+i)*0.4, 0, Math.PI*2);
-            zCtx.fill();
-            // Eye
-            zCtx.fillStyle = '#ff0000';
-            zCtx.beginPath();
-            zCtx.arc(lx+8, leechY-2, 2, 0, Math.PI*2);
-            zCtx.fill();
-            zCtx.fillStyle = '#2a3a2a';
+        if(b.anim==='pulse') {{
+            zCtx.fillStyle = 'rgba(255,100,100,'+(0.1+Math.sin(wave)*0.1)+')';
+            zCtx.fillRect(-liquidW/2+5, animLy+5, liquidW-10, animLh-10);
         }}
-    }}
-    if(b.special==='swirl') {{
-        zCtx.strokeStyle = 'rgba(200,50,50,0.5)';
-        zCtx.lineWidth = 3;
-        for(let i=0; i<4; i++) {{
+        if(b.anim==='shimmer') {{
+            for(let i=0; i<8; i++) {{
+                const sx = Math.sin(wave+i)*liquidW/3;
+                const sy = animLy+10+i*18;
+                if(sy < liquidBot-5 && sy > animLy) {{
+                    zCtx.beginPath();
+                    zCtx.arc(sx, sy, 2, 0, Math.PI*2);
+                    zCtx.fillStyle = 'rgba(200,200,220,0.5)';
+                    zCtx.fill();
+                }}
+            }}
+        }}
+        if(b.anim==='sparkle') {{
+            for(let i=0; i<6; i++) {{
+                if(Math.sin(wave*2+i)>0.7) {{
+                    const sx = (Math.random()-0.5)*liquidW*0.6;
+                    const sy = animLy+20+Math.random()*animLh*0.7;
+                    zCtx.beginPath();
+                    zCtx.arc(sx, sy, 2, 0, Math.PI*2);
+                    zCtx.fillStyle = 'rgba(255,255,255,0.8)';
+                    zCtx.fill();
+                }}
+            }}
+        }}
+        if(b.special==='leeches') {{
+            zCtx.fillStyle = '#2a3a2a';
+            for(let i=0; i<5; i++) {{
+                const lx = Math.sin(wave*0.4+i*2)*30;
+                const leechY = animLy+25+i*22+Math.cos(wave*0.3+i)*10;
+                if(leechY < liquidBot-10 && leechY > animLy+10) {{
+                    zCtx.beginPath();
+                    zCtx.ellipse(lx, leechY, 14, 7, Math.sin(wave+i)*0.4, 0, Math.PI*2);
+                    zCtx.fill();
+                    zCtx.fillStyle = '#ff0000';
+                    zCtx.beginPath();
+                    zCtx.arc(lx+10, leechY-2, 2, 0, Math.PI*2);
+                    zCtx.fill();
+                    zCtx.fillStyle = '#2a3a2a';
+                }}
+            }}
+        }}
+        if(b.special==='swirl') {{
+            zCtx.strokeStyle = 'rgba(200,50,50,0.5)';
+            zCtx.lineWidth = 3;
+            for(let i=0; i<4; i++) {{
+                const sy = animLy+30+i*20;
+                if(sy < liquidBot-15 && sy > animLy+10) {{
+                    zCtx.beginPath();
+                    zCtx.arc(Math.sin(wave+i)*15, sy, 10+i*4, wave+i, wave+i+Math.PI);
+                    zCtx.stroke();
+                }}
+            }}
+        }}
+        if(b.anim==='float') {{
+            zCtx.fillStyle = 'rgba(200,200,180,0.7)';
+            for(let i=0; i<7; i++) {{
+                const fx = (Math.sin(wave*0.3+i*1.5)-0.5)*liquidW*0.5;
+                const fy = animLy+12+((wave*8+i*18)%(animLh-15));
+                if(fy > animLy && fy < liquidBot-5) {{
+                    zCtx.beginPath();
+                    zCtx.ellipse(fx, fy, 5, 3, wave+i, 0, Math.PI*2);
+                    zCtx.fill();
+                }}
+            }}
+        }}
+        
+        // NIGHTMARE: Face in liquid
+        if(NIGHTMARE && Math.random()>0.97) {{
+            const faceY = animLy + animLh/2;
+            zCtx.fillStyle = 'rgba(0,0,0,0.4)';
             zCtx.beginPath();
-            zCtx.arc(Math.sin(wave+i)*18, ly+50+i*25, 12+i*5, wave+i, wave+i+Math.PI);
+            zCtx.arc(0, faceY, 20, 0, Math.PI*2);
+            zCtx.fill();
+            zCtx.fillStyle = 'rgba(255,255,255,0.6)';
+            zCtx.beginPath();
+            zCtx.arc(-7, faceY-5, 4, 0, Math.PI*2);
+            zCtx.arc(7, faceY-5, 4, 0, Math.PI*2);
+            zCtx.fill();
+            zCtx.strokeStyle = 'rgba(255,255,255,0.4)';
+            zCtx.beginPath();
+            zCtx.arc(0, faceY+8, 8, 0.2, Math.PI-0.2);
             zCtx.stroke();
         }}
     }}
-    if(b.anim==='float') {{
-        zCtx.fillStyle = 'rgba(200,200,180,0.7)';
-        for(let i=0; i<7; i++) {{
-            const fx = (Math.sin(wave*0.3+i*1.5)-0.5)*bW*0.6;
-            const fy = ly+15+((wave*8+i*20)%(lh-15));
-            zCtx.beginPath();
-            zCtx.ellipse(fx, fy, 4, 3, wave+i, 0, Math.PI*2);
-            zCtx.fill();
+    
+    // ===== CORK (only for bottles that use corks) =====
+    if(['laudanum','ether','carbolic','mercury','blood_sc','tapeworm','soothing'].includes(b.id)) {{
+        zCtx.fillStyle = '#8b7355';
+        zCtx.fillRect(-22, neckY-5, 44, 30);
+    }}
+    
+    // ===== LABEL =====
+    if(labelW > 0 && b.id !== 'unmarked') {{
+        zCtx.fillStyle = uvMode ? '#220033' : '#ffffee';
+        zCtx.fillRect(-labelW/2, labelY-labelH/2, labelW, labelH);
+        zCtx.strokeStyle = '#8b7355'; 
+        zCtx.lineWidth = 1;
+        zCtx.strokeRect(-labelW/2, labelY-labelH/2, labelW, labelH);
+        
+        zCtx.fillStyle = uvMode ? '{uv_color}' : '#333';
+        zCtx.font = (labelW < 50 ? '11' : '14') + 'px Georgia';
+        zCtx.textAlign = 'center';
+        zCtx.fillText(b.name, 0, labelY - 2);
+        zCtx.font = (labelW < 50 ? '9' : '11') + 'px Georgia';
+        zCtx.fillText(b.sub, 0, labelY + 14);
+        
+        // Special border for important bottles
+        if(['vita','strychnine','unwilling','mercy'].includes(b.id)) {{
+            zCtx.strokeStyle = (b.id === 'vita') ? '#880000' : 
+                              (b.id === 'strychnine') ? '#aa0000' :
+                              (b.id === 'unwilling') ? '#333' : '#555';
+            zCtx.lineWidth = 2;
+            zCtx.strokeRect(-labelW/2+3, labelY-labelH/2+3, labelW-6, labelH-6);
         }}
     }}
-    
-    // NIGHTMARE: Face in liquid
-    if(NIGHTMARE && Math.random()>0.97) {{
-        zCtx.fillStyle = 'rgba(0,0,0,0.4)';
-        zCtx.beginPath();
-        zCtx.arc(0, ly+lh/2, 20, 0, Math.PI*2);
-        zCtx.fill();
-        zCtx.fillStyle = 'rgba(255,255,255,0.6)';
-        zCtx.beginPath();
-        zCtx.arc(-7, ly+lh/2-5, 4, 0, Math.PI*2);
-        zCtx.arc(7, ly+lh/2-5, 4, 0, Math.PI*2);
-        zCtx.fill();
-        zCtx.strokeStyle = 'rgba(255,255,255,0.4)';
-        zCtx.beginPath();
-        zCtx.arc(0, ly+lh/2+8, 8, 0.2, Math.PI-0.2);
-        zCtx.stroke();
-    }}
-    
-    // Cork
-    zCtx.fillStyle = '#8b7355';
-    zCtx.fillRect(-22, -bH/2-28, 44, 32);
-    
-    // Label
-    zCtx.fillStyle = uvMode ? '#220033' : '#ffffee';
-    zCtx.fillRect(-40, -30, 80, 60);
-    zCtx.strokeStyle = '#8b7355'; zCtx.lineWidth = 1;
-    zCtx.strokeRect(-40, -30, 80, 60);
-    zCtx.fillStyle = uvMode ? '{uv_color}' : '#333';
-    zCtx.font = '13px Georgia';
-    zCtx.textAlign = 'center';
-    zCtx.fillText(b.name, 0, -5);
-    zCtx.font = '10px Georgia';
-    zCtx.fillText(b.sub, 0, 12);
     
     // UV mode extra text
     if(uvMode && b.uv) {{
         zCtx.fillStyle = '{uv_color}';
-        zCtx.font = 'italic 9px Georgia';
-        zCtx.fillText('UV:', 0, 28);
+        zCtx.font = 'italic 11px Georgia';
+        zCtx.textAlign = 'center';
+        const uvY = (b.id === 'unmarked' || b.id === 'essence') ? 0 : labelY + labelH/2 + 18;
+        zCtx.fillText(b.uv, 0, uvY);
     }}
     
     zCtx.restore();
