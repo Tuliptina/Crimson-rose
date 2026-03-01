@@ -1,1915 +1,1035 @@
 """
-🧪 The Specimen Cabinet — ULTIMATE Edition
-Victorian medical cabinet with ALL features:
-- Drawer system with hidden items
-- Zoom mode for bottle inspection
-- Sound descriptions
-- Advanced bottle animations
-- Hidden compartment behind back panel
-- Blacklight mode (UV reveals secrets)
-- Combination lock puzzle
-- Bottle mixing system
-- Full nightmare mode at Intensity 5
-- UPDATED: 2D bottle shapes now match 3D designs!
+🧪 The Fitzroy Collection — Enhanced 3D Apothecary Cabinet
+Victorian medical cabinet with interactive bottles and rich atmospheric props.
+
+NEW ELEMENTS:
+- Human skull (memento mori) on top
+- Dripping candle with animated flame
+- Stack of leather-bound books
+- Brass balance scales
+- Mortar and pestle
+- Victorian syringe (brass & glass)
+- Magnifying glass
+- Cobwebs between bottles
+- Dust particles in candlelight
+- Dried herbs hanging from top
+- Mouse peeking out at intensity 2+
+- Pocket watch draped over shelf
+- Wax seal stamps
+- Chemical stains on wood
 """
 
 def get_cabinet_3d(mode: str = "gaslight", intensity: int = 3) -> str:
-    """Generate the ultimate interactive medical cabinet."""
-    
-    if mode == "gothic":
-        bg = "0x0a0505"; wood = "0x3a1818"; wood_dark = "0x1a0808"
-        metal = "0x5a5a5a"; light = "0xff4422"; text = "#cc0000"
-        ambient = 0.35; uv_color = "#ff00ff"
-    elif mode == "clinical":
-        bg = "0xe8e8e8"; wood = "0xd8d0c8"; wood_dark = "0xc0b8b0"
-        metal = "0xbbbbbb"; light = "0xffffff"; text = "#2f4f4f"
-        ambient = 0.7; uv_color = "#9900ff"
-    else:
-        bg = "0x1a1410"; wood = "0x5a4530"; wood_dark = "0x3c2818"
-        metal = "0xc8a030"; light = "0xffbb55"; text = "#d4a574"
-        ambient = 0.5; uv_color = "#cc00ff"
-    
+    colors = {
+        "gaslight": {
+            "bg": 0x1a1410, "wood": 0x5a3d25, "wood_dark": 0x3a2515,
+            "metal": 0xb8860b, "glass": 0xeeffaa, "cloth": 0x8b7355,
+            "light": 0xffaa44, "text": "#d4a574", "glow": 0xffcc88,
+            "bone": 0xe8dcc8, "paper": 0xf5f0e0, "leather": 0x3a2010,
+            "wax": 0x8b1a1a, "herb": 0x2a4a1a, "cobweb": 0xccccbb,
+            "stain_dark": 0x2a1a0a, "stain_red": 0x4a1010,
+        },
+        "gothic": {
+            "bg": 0x0a0a0a, "wood": 0x2a1515, "wood_dark": 0x1a0a0a,
+            "metal": 0x4a4a4a, "glass": 0x44ff44, "cloth": 0x1a1a1a,
+            "light": 0xff2200, "text": "#cc0000", "glow": 0xff4444,
+            "bone": 0xccbbaa, "paper": 0xddccbb, "leather": 0x1a0a05,
+            "wax": 0x660000, "herb": 0x1a2a0a, "cobweb": 0x555544,
+            "stain_dark": 0x1a0505, "stain_red": 0x440000,
+        },
+        "clinical": {
+            "bg": 0xf0f0f0, "wood": 0xd0c8b8, "wood_dark": 0xb8b0a0,
+            "metal": 0xaaaaaa, "glass": 0xccddff, "cloth": 0xffffff,
+            "light": 0xffffff, "text": "#2f4f4f", "glow": 0xeeeeee,
+            "bone": 0xf5f0e8, "paper": 0xffffff, "leather": 0x554433,
+            "wax": 0x993333, "herb": 0x557755, "cobweb": 0xdddddd,
+            "stain_dark": 0xaa9988, "stain_red": 0xbb8888,
+        }
+    }
+    c = colors.get(mode, colors["gaslight"])
     creep = intensity / 5.0
-    nightmare = "true" if intensity >= 5 else "false"
-    
-    html = f'''<!DOCTYPE html>
+
+    def hx(v):
+        return f"0x{v:06x}"
+
+    html = f'''
+<!DOCTYPE html>
 <html>
 <head>
 <meta charset="utf-8">
 <style>
-* {{ margin:0; padding:0; box-sizing:border-box; }}
-body {{ width:100%; height:100vh; overflow:hidden; background:#111; font-family:Georgia,serif; color:{text}; }}
-#container {{ width:100%; height:100%; cursor:grab; }}
-#container:active {{ cursor:grabbing; }}
-
-.ui {{ position:absolute; pointer-events:none; z-index:100; }}
-#title {{ top:15px; left:50%; transform:translateX(-50%); font-size:16px; letter-spacing:3px; opacity:0.8; }}
-#info {{ bottom:15px; left:50%; transform:translateX(-50%); font-size:11px; opacity:0.5; }}
-#hint {{ bottom:50px; left:50%; transform:translateX(-50%); font-size:14px; background:rgba(0,0,0,0.85); padding:8px 16px; border-radius:4px; opacity:0; transition:opacity 0.3s; }}
-#secrets {{ top:15px; right:15px; font-size:12px; opacity:0.7; }}
-#sounds {{ bottom:90px; left:50%; transform:translateX(-50%); font-style:italic; font-size:13px; opacity:0; transition:opacity 1s; }}
-#nightmare-text {{ position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); font-size:20px; color:#880000; opacity:0; transition:opacity 2s; pointer-events:none; z-index:300; text-shadow:0 0 20px #ff0000; }}
-
-/* Controls */
-#controls {{ position:absolute; top:60px; right:15px; display:flex; flex-direction:column; gap:8px; z-index:150; }}
-#controls button {{ padding:8px 14px; background:rgba(0,0,0,0.7); border:1px solid {text}44; color:{text}; font-family:Georgia; font-size:11px; cursor:pointer; pointer-events:auto; transition:all 0.3s; }}
-#controls button:hover {{ background:{text}22; }}
-#controls button.active {{ background:{text}33; border-color:{text}; }}
-
-/* Vignette */
-.vignette {{ position:absolute; top:0; left:0; width:100%; height:100%; background:radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.6) 100%); pointer-events:none; z-index:50; }}
-
-/* UV Overlay */
-#uv-overlay {{ position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(80,0,120,0.15); pointer-events:none; z-index:45; opacity:0; transition:opacity 0.5s; }}
-#uv-overlay.active {{ opacity:1; }}
-
-/* Zoom Panel */
-#zoom-panel {{ position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.97); display:none; z-index:200; }}
-#zoom-panel.show {{ display:flex; }}
-#zoom-left {{ flex:1.2; display:flex; align-items:center; justify-content:center; position:relative; }}
-#zoom-canvas {{ border:1px solid {text}22; }}
-#zoom-right {{ flex:1; max-width:380px; padding:40px; display:flex; flex-direction:column; justify-content:center; }}
-#zoom-name {{ font-size:26px; margin-bottom:8px; }}
-#zoom-sub {{ font-size:13px; opacity:0.5; font-style:italic; margin-bottom:20px; border-bottom:1px solid {text}22; padding-bottom:15px; }}
-#zoom-desc {{ font-size:15px; line-height:1.7; margin-bottom:15px; }}
-#zoom-contents {{ font-size:13px; opacity:0.8; padding:12px; background:rgba(255,255,255,0.03); border-left:3px solid {text}33; margin-bottom:15px; }}
-#zoom-warn {{ display:inline-block; padding:5px 12px; background:#331100; font-size:10px; letter-spacing:2px; }}
-#zoom-secret {{ color:#bb3333; font-style:italic; margin-top:18px; opacity:0; transition:opacity 1.5s; }}
-#zoom-secret.show {{ opacity:1; }}
-#zoom-uv {{ color:{uv_color}; font-style:italic; margin-top:12px; opacity:0; transition:opacity 0.5s; display:none; }}
-#zoom-uv.show {{ opacity:1; display:block; }}
-#zoom-close {{ position:absolute; top:25px; right:30px; font-size:32px; cursor:pointer; opacity:0.5; z-index:210; }}
-#zoom-close:hover {{ opacity:1; }}
-#zoom-btns {{ display:flex; gap:10px; margin-top:20px; flex-wrap:wrap; }}
-#zoom-btns button {{ padding:8px 16px; background:transparent; border:1px solid {text}44; color:{text}; font-family:Georgia; font-size:12px; cursor:pointer; }}
-#zoom-btns button:hover {{ background:{text}22; }}
-
-/* Drawer Panel */
-#drawer-panel {{ position:absolute; bottom:0; left:50%; transform:translateX(-50%); width:80%; max-width:700px; background:rgba(20,15,10,0.97); border:1px solid {text}33; border-bottom:none; padding:20px; display:none; z-index:180; border-radius:8px 8px 0 0; }}
-#drawer-panel.show {{ display:block; }}
-#drawer-title {{ font-size:14px; letter-spacing:2px; margin-bottom:15px; opacity:0.8; }}
-#drawer-items {{ display:flex; gap:15px; flex-wrap:wrap; }}
-.drawer-item {{ padding:12px 18px; background:rgba(0,0,0,0.4); border:1px solid {text}22; cursor:pointer; font-size:13px; transition:all 0.3s; }}
-.drawer-item:hover {{ background:{text}22; border-color:{text}55; }}
-.drawer-item.locked {{ opacity:0.4; cursor:not-allowed; }}
-#drawer-close {{ position:absolute; top:10px; right:15px; font-size:20px; cursor:pointer; opacity:0.5; }}
-
-/* Combination Lock */
-#lock-panel {{ position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); background:rgba(15,10,8,0.98); border:2px solid {text}44; padding:30px; display:none; z-index:250; text-align:center; border-radius:8px; }}
-#lock-panel.show {{ display:block; }}
-#lock-title {{ font-size:14px; letter-spacing:2px; margin-bottom:20px; }}
-#lock-dials {{ display:flex; gap:10px; justify-content:center; margin-bottom:20px; }}
-.dial {{ width:50px; height:60px; background:#222; border:2px solid {text}55; display:flex; align-items:center; justify-content:center; font-size:28px; font-family:monospace; cursor:pointer; user-select:none; }}
-.dial:hover {{ border-color:{text}; }}
-#lock-submit {{ padding:10px 25px; background:transparent; border:1px solid {text}55; color:{text}; font-family:Georgia; cursor:pointer; }}
-#lock-hint {{ font-size:11px; opacity:0.5; margin-top:15px; font-style:italic; }}
-#lock-close {{ position:absolute; top:10px; right:15px; font-size:20px; cursor:pointer; opacity:0.5; }}
-
-/* Mixing Panel */
-#mix-panel {{ position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); background:rgba(15,10,8,0.98); border:2px solid {text}44; padding:30px; display:none; z-index:250; border-radius:8px; min-width:350px; }}
-#mix-panel.show {{ display:block; }}
-#mix-title {{ font-size:14px; letter-spacing:2px; margin-bottom:20px; text-align:center; }}
-#mix-slots {{ display:flex; gap:15px; justify-content:center; margin-bottom:20px; }}
-.mix-slot {{ width:70px; height:90px; background:#1a1510; border:2px dashed {text}33; display:flex; align-items:center; justify-content:center; font-size:11px; opacity:0.6; cursor:pointer; }}
-.mix-slot.filled {{ border-style:solid; opacity:1; border-color:{text}66; }}
-#mix-result {{ text-align:center; min-height:60px; padding:15px; background:rgba(0,0,0,0.3); margin-bottom:15px; font-style:italic; }}
-#mix-buttons {{ display:flex; gap:10px; justify-content:center; }}
-#mix-buttons button {{ padding:8px 18px; background:transparent; border:1px solid {text}44; color:{text}; font-family:Georgia; cursor:pointer; }}
-#mix-close {{ position:absolute; top:10px; right:15px; font-size:20px; cursor:pointer; opacity:0.5; }}
-
-/* Hidden Panel Flash */
-#hidden-flash {{ position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); font-size:16px; letter-spacing:3px; color:#aa0000; opacity:0; transition:opacity 0.5s; z-index:160; text-shadow:0 0 15px #ff0000; }}
+*{{margin:0;padding:0;box-sizing:border-box;}}
+html,body{{width:100%;height:100%;overflow:hidden;background:#{c["bg"]:06x};font-family:Georgia,serif;}}
+#container{{width:100%;height:100%;position:relative;cursor:grab;}}
+#container:active{{cursor:grabbing;}}
+canvas{{display:block;width:100%!important;height:100%!important;}}
+#info{{position:absolute;bottom:15px;left:50%;transform:translateX(-50%);color:{c["text"]};font-size:12px;opacity:0.6;text-shadow:0 0 8px rgba(0,0,0,0.9);z-index:100;pointer-events:none;text-align:center;}}
+#mode-label{{position:absolute;top:15px;left:15px;color:{c["text"]};font-size:10px;text-transform:uppercase;letter-spacing:3px;opacity:0.4;z-index:100;pointer-events:none;}}
+#tooltip{{position:absolute;background:rgba(0,0,0,0.92);color:{c["text"]};padding:12px 16px;border-radius:4px;font-size:13px;max-width:260px;line-height:1.5;pointer-events:none;opacity:0;transition:opacity 0.3s;z-index:200;border:1px solid {c["text"]}44;}}
+#tooltip.visible{{opacity:1;}}
+#tooltip .title{{font-weight:bold;margin-bottom:4px;}}
+#tooltip .lore{{font-style:italic;font-size:11px;margin-top:6px;opacity:0.7;border-top:1px solid {c["text"]}33;padding-top:6px;}}
+.vignette{{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;background:radial-gradient(ellipse at center,transparent 40%,rgba(0,0,0,{0.4+creep*0.25 if mode!='clinical' else 0.05}) 100%);z-index:50;}}
+#uv-overlay{{position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(30,0,80,0.0);pointer-events:none;z-index:55;transition:background 0.5s;}}
+#uv-btn{{position:absolute;top:15px;right:15px;background:rgba(0,0,0,0.7);color:{c["text"]};border:1px solid {c["text"]}66;padding:8px 14px;font-family:Georgia,serif;font-size:12px;cursor:pointer;z-index:200;border-radius:3px;transition:all 0.3s;}}
+#uv-btn:hover{{border-color:{c["text"]};background:rgba(0,0,0,0.9);}}
+#uv-btn.active{{background:rgba(60,0,120,0.8);border-color:#9944ff;color:#bb88ff;}}
 </style>
 </head>
 <body>
 <div id="container"></div>
 <div class="vignette"></div>
 <div id="uv-overlay"></div>
-
-<div id="title" class="ui">THE FITZROY COLLECTION</div>
-<div id="info" class="ui">Drag to rotate • Scroll to zoom • Click bottles to examine</div>
-<div id="hint" class="ui"></div>
-<div id="secrets" class="ui">Secrets: <span id="snum">0</span>/12</div>
-<div id="sounds" class="ui"></div>
-<div id="nightmare-text"></div>
-<div id="hidden-flash">SECRET COMPARTMENT FOUND</div>
-
-<div id="controls">
-    <button id="btn-uv">🔦 UV Light</button>
-    <button id="btn-drawer">🗄️ Drawers</button>
-    <button id="btn-mix">⚗️ Mix</button>
-</div>
-
-<!-- Zoom Panel -->
-<div id="zoom-panel">
-    <div id="zoom-close">×</div>
-    <div id="zoom-left"><canvas id="zoom-canvas" width="380" height="480"></canvas></div>
-    <div id="zoom-right">
-        <div id="zoom-name"></div>
-        <div id="zoom-sub"></div>
-        <div id="zoom-desc"></div>
-        <div id="zoom-contents"></div>
-        <div id="zoom-warn"></div>
-        <div id="zoom-secret"></div>
-        <div id="zoom-uv"></div>
-        <div id="zoom-btns">
-            <button id="z-shake">Shake</button>
-            <button id="z-smell">Smell</button>
-            <button id="z-pour">Pour Drop</button>
-            <button id="z-addmix">Add to Mix</button>
-        </div>
-    </div>
-</div>
-
-<!-- Drawer Panel -->
-<div id="drawer-panel">
-    <div id="drawer-close">×</div>
-    <div id="drawer-title">LOWER DRAWERS</div>
-    <div id="drawer-items"></div>
-</div>
-
-<!-- Lock Panel -->
-<div id="lock-panel">
-    <div id="lock-close">×</div>
-    <div id="lock-title">🔒 SOCIETY DRAWER</div>
-    <div id="lock-dials">
-        <div class="dial" data-i="0">0</div>
-        <div class="dial" data-i="1">0</div>
-        <div class="dial" data-i="2">0</div>
-    </div>
-    <button id="lock-submit">UNLOCK</button>
-    <div id="lock-hint">"The year the Society was founded..."</div>
-</div>
-
-<!-- Mix Panel -->
-<div id="mix-panel">
-    <div id="mix-close">×</div>
-    <div id="mix-title">⚗️ MIXING CHAMBER</div>
-    <div id="mix-slots">
-        <div class="mix-slot" data-slot="0">Empty</div>
-        <div class="mix-slot" data-slot="1">Empty</div>
-    </div>
-    <div id="mix-result">Add two bottles to combine...</div>
-    <div id="mix-buttons">
-        <button id="mix-combine">Combine</button>
-        <button id="mix-clear">Clear</button>
-    </div>
-</div>
+<div id="mode-label">{mode.upper()} · INTENSITY {intensity}</div>
+<div id="info">Drag to orbit · Scroll to zoom · Click objects to examine</div>
+<button id="uv-btn" onclick="toggleUV()">🔦 UV Light</button>
+<div id="tooltip"><div class="title"></div><div class="desc"></div><div class="lore"></div></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
-(function() {{
+(function(){{
+'use strict';
+
+const MODE = '{mode}';
 const INTENSITY = {intensity};
-const NIGHTMARE = {nightmare};
 const CREEP = {creep};
+let uvMode = false;
 
-console.log('Cabinet starting...', {{ INTENSITY, NIGHTMARE, CREEP }});
-
-let secrets = 0, uvMode = false, hiddenFound = false;
-const found = new Set();
-const mixSlots = [null, null];
-
-// Sound descriptions
-const SOUNDS = [
-    '*Wood creaks as you lean closer...*',
-    '*Glass clinks softly...*',
-    '*Liquid sloshes against its container...*',
-    '*A cork shifts slightly...*',
-    '*Something settles on a shelf...*',
-    '*You hear your own breathing...*',
-    '*Dust motes drift in the light...*'
-];
-const NIGHTMARE_SOUNDS = [
-    '*Something taps from inside a jar...*',
-    '*A wet sound. Behind you.*',
-    '*Whispers. Too faint to understand.*',
-    '*The leeches are excited.*',
-    '*A face. In the reflection. Gone now.*',
-    '*"Open me..." Was that a voice?*'
-];
-
-// Drawer items
-const DRAWER_ITEMS = [
-    {{ id:'scalpel', name:'Surgical Scalpel', desc:'Initials A.F. on handle. Dried blood.', locked:false }},
-    {{ id:'letters', name:'Correspondence', desc:'Letters from T.B. Blackmail?', locked:false }},
-    {{ id:'journal', name:'Private Journal', desc:'Fitzroy\\'s notes. Encoded.', locked:false }},
-    {{ id:'society', name:'🔒 Society Drawer', desc:'Locked. Requires combination.', locked:true }},
-    {{ id:'blackbook', name:'The Black Book', desc:'Ledger of procured subjects.', locked:true }},
-    {{ id:'mask', name:'Ceremonial Mask', desc:'Worn for "special procedures."', locked:true }}
-];
-
-// Bottle data with UV secrets and mix properties
-const BOTTLES = [
-    {{ id:'laudanum', name:'Laudanum', sub:'Tincture of Opium', color:0xcc8844, liquid:0x553311, level:0.6, row:0, slot:0, desc:'Opium in alcohol. For everything.', contents:'Half empty.', warn:'ADDICTIVE', secret:'Note: "Mrs. Harrison — 40 drops."', uv:'Hidden text: "SILENCE HER"', hasSecret:true, mixType:'sedative', anim:'bubble' }},
-    {{ id:'chloroform', name:'Chloroform', sub:'Anesthetic', color:0x4466bb, liquid:0xccddff, level:0.25, row:0, slot:1, desc:'Volatile anesthetic.', contents:'Recently used.', warn:'POISON', secret:'Used without surgeries scheduled.', uv:'Bloodstain under label', hasSecret:INTENSITY>=3, mixType:'knockout', anim:'swirl' }},
-    {{ id:'soothing', name:"Winslow's Syrup", sub:'For Infants', color:0xeeddbb, liquid:0x997755, level:0.75, row:0, slot:2, desc:'Soothing syrup for babies.', contents:'Morphine and alcohol.', warn:'EXTERNAL USE', secret:'Dosage 10x normal.', uv:'Infant names listed', hasSecret:INTENSITY>=2, mixType:'sedative', anim:'none' }},
-    {{ id:'mercury', name:'Mercury', sub:'Blue Mass', color:0x334455, liquid:0x99aaaa, level:0.5, row:0, slot:3, desc:'Treatment. Causes madness.', contents:'Silver shimmer.', warn:'TOXIC', secret:'Names behind label.', uv:'Society symbol', hasSecret:INTENSITY>=4, mixType:'poison', anim:'shimmer' }},
-    {{ id:'arsenic', name:'Arsenic', sub:'Complexion', color:0x88aa77, liquid:0xcceecc, level:0.65, row:0, slot:4, desc:'For pale beauty.', contents:'Sweet poison.', warn:'AS DIRECTED', secret:'Why does he keep these?', uv:'"For V.H. — final dose"', hasSecret:INTENSITY>=3, mixType:'poison', anim:'none' }},
-    
-    {{ id:'ether', name:'Ether', sub:'Anesthetic', color:0x775533, liquid:0xffeedd, level:0.35, row:1, slot:0, desc:'Patients sleep. Usually.', contents:'Flammable.', warn:'NO FLAME', secret:'Scratches inside lid.', uv:'Claw marks visible', hasSecret:INTENSITY>=5, mixType:'knockout', anim:'bubble' }},
-    {{ id:'cocaine', name:'Cocaine 4%', sub:'Local', color:0xeeeeff, liquid:0xffffff, level:0.12, row:1, slot:1, desc:'Anesthetic. Confidence.', contents:'Nearly empty.', warn:'MEDICINAL', secret:"Fitzroy's daily supply.", uv:'Usage log: every 3 hours', hasSecret:true, mixType:'stimulant', anim:'sparkle' }},
-    {{ id:'strychnine', name:'Strychnine', sub:'Nerve Tonic', color:0xdd3333, liquid:0xffcccc, level:0.5, row:1, slot:2, desc:'Stimulant or death.', contents:'Red warning.', warn:'POISON', secret:'Lethal dosage noted.', uv:'"For the weak ones"', hasSecret:INTENSITY>=4, mixType:'poison', anim:'pulse' }},
-    {{ id:'carbolic', name:'Carbolic Acid', sub:'Antiseptic', color:0x4455aa, liquid:0xeeeedd, level:0.7, row:1, slot:3, desc:'Kills infection. And evidence.', contents:'Burns organic matter.', warn:'CORROSIVE', secret:'Blood and hair on cap.', uv:'Fingerprints revealed', hasSecret:INTENSITY>=4, mixType:'acid', anim:'none' }},
-    {{ id:'embalming', name:'Embalming', sub:'Preservation', color:0x888866, liquid:0xccccaa, level:0.85, row:1, slot:4, desc:'For specimens.', contents:'Large supply.', warn:'TOXIC FUMES', secret:'Why so much?', uv:'Off-site address', hasSecret:INTENSITY>=3, mixType:'preserve', anim:'none' }},
-    
-    {{ id:'vita', name:'Vita Aeterna', sub:'Eternal Essence', color:0x880022, liquid:0xaa0000, level:0.55, row:2, slot:0, desc:'Society communion. Swirls alone.', contents:'Too red for wine.', warn:'MEMBERS ONLY', secret:'"Sanguis innocentum"', uv:'BLOOD OF 7 INFANTS', hasSecret:true, mixType:'blood', anim:'swirl', special:'swirl' }},
-    {{ id:'unmarked', name:'Bottle #7', sub:'Unmarked', color:0x666666, liquid:0xeeeeee, level:0.5, row:2, slot:1, desc:'No label. Almonds.', contents:'Cyanide.', warn:'DO NOT OPEN', secret:'Enough to kill 100.', uv:'Batch number: 1847', hasSecret:INTENSITY>=3, mixType:'poison', anim:'none' }},
-    {{ id:'unwilling', name:'"Unwilling"', sub:'Special', color:0x222222, liquid:0x332244, level:0.7, row:2, slot:2, desc:'For resistant subjects.', contents:'Instant knockout.', warn:'SOCIETY', secret:'12 "donations" — none willing.', uv:'Map to procurement sites', hasSecret:true, mixType:'knockout', anim:'pulse' }},
-    {{ id:'mercy', name:'"Final Mercy"', sub:'Terminal', color:0xaa0000, liquid:0x220000, level:0.9, row:2, slot:3, desc:'Ends suffering.', contents:'Death in seconds.', warn:'EMERGENCY', secret:'3 doses missing.', uv:'"THANK YOU" scratched inside', hasSecret:INTENSITY>=4, mixType:'lethal', anim:'pulse' }},
-    {{ id:'blood_sc', name:'Blood—S.C.', sub:'Specimen', color:0xdddddd, liquid:0x660000, level:0.6, row:2, slot:4, desc:'Initials S.C.', contents:'Still viable.', warn:'DO NOT DISCARD', secret:'Sebastian Carlisle. Why?', uv:'TEST RESULTS: Compatible', hasSecret:true, mixType:'blood', anim:'none' }},
-    
-    {{ id:'teeth', name:'Teeth', sub:'Collection', color:0xffffdd, liquid:0xffffcc, level:0.8, row:3, slot:0, desc:'47 teeth in alcohol.', contents:'12+ sources.', warn:'SPECIMEN', secret:'Some from the living.', uv:'Names on each tooth', hasSecret:INTENSITY>=3, mixType:'none', anim:'float' }},
-    {{ id:'leeches', name:'Leeches', sub:'Live', color:0xccffcc, liquid:0xaaddaa, level:0.7, row:3, slot:1, desc:'They sense you.', contents:'Hungry.', warn:'LIVE', secret:'Why so large?', uv:'Feeding log: weekly', hasSecret:INTENSITY>=2, mixType:'none', anim:'leeches', special:'leeches' }},
-    {{ id:'essence', name:'"Youth"', sub:'Rejuvenation', color:0xddccbb, liquid:0xffffdd, level:0.6, row:3, slot:2, desc:'Smells of fat.', contents:'Softens wrinkles.', warn:'EXTERNAL', secret:'Human fat. From poor.', uv:'Supplier: Resurrection Men', hasSecret:INTENSITY>=4, mixType:'none', anim:'none' }},
-    {{ id:'tapeworm', name:'Tapeworm', sub:'Diet', color:0xeeeedd, liquid:0xffffee, level:0.7, row:3, slot:3, desc:'Diet aid.', contents:'Weight loss.', warn:'DO NOT EAT', secret:'Being farmed.', uv:'Breeding instructions', hasSecret:INTENSITY>=3, mixType:'none', anim:'float' }},
-    {{ id:'brain', name:'Nerve Food', sub:'For Mind', color:0xbbaa88, liquid:0xccbbaa, level:0.5, row:3, slot:4, desc:'Gray matter.', contents:'Transfers mental energy.', warn:'TWICE DAILY', secret:'Human brain. Cannibalism.', uv:'"GENIUS DONOR"', hasSecret:true, mixType:'none', anim:'pulse' }}
-];
-
-// Mix combinations
-const MIX_RESULTS = {{
-    'sedative+sedative': {{ result:'Lethal Overdose', effect:'A dose no one wakes from.', color:'#880000' }},
-    'sedative+knockout': {{ result:'Deep Sleep', effect:'Hours of unconsciousness.', color:'#666688' }},
-    'sedative+stimulant': {{ result:'Confusion Tonic', effect:'Disorientation and compliance.', color:'#888866' }},
-    'knockout+knockout': {{ result:'Instant Blackout', effect:'Seconds to unconsciousness.', color:'#444466' }},
-    'poison+poison': {{ result:'Certain Death', effect:'No antidote exists.', color:'#880000' }},
-    'poison+blood': {{ result:'Tainted Blood', effect:'For the communion...', color:'#aa0022' }},
-    'blood+blood': {{ result:'Vita Renewed', effect:'The Society\\'s sacrament.', color:'#cc0000' }},
-    'stimulant+stimulant': {{ result:'Heart Attack', effect:'Too much. The heart cannot take it.', color:'#ff4444' }},
-    'stimulant+poison': {{ result:'Painful End', effect:'Alert and dying.', color:'#cc4400' }},
-    'acid+blood': {{ result:'Evidence Destroyed', effect:'Nothing remains to identify.', color:'#555555' }},
-    'preserve+blood': {{ result:'Eternal Specimen', effect:'Preserved forever. Still aware?', color:'#668866' }},
-    'lethal+blood': {{ result:'Mercy Communion', effect:'The final sacrament.', color:'#440000' }}
-}};
-
-// Three.js setup
 const container = document.getElementById('container');
-const scene = new THREE.Scene();
-scene.background = new THREE.Color({bg});
+const W = container.clientWidth||window.innerWidth;
+const H = container.clientHeight||window.innerHeight;
 
-const camera = new THREE.PerspectiveCamera(50, window.innerWidth/window.innerHeight, 0.1, 100);
-camera.position.set(0, 1.5, 6);
-camera.lookAt(0, 1.2, 0);
+const scene = new THREE.Scene();
+scene.background = new THREE.Color({hx(c["bg"])});
+if (MODE !== 'clinical') scene.fog = new THREE.FogExp2({hx(c["bg"])}, 0.04);
+
+const camera = new THREE.PerspectiveCamera(50, W/H, 0.1, 100);
+camera.position.set(0, 1.5, 4);
+camera.lookAt(0, 1, 0);
 
 const renderer = new THREE.WebGLRenderer({{ antialias:true }});
-renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setSize(W, H);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 container.appendChild(renderer.domElement);
-console.log('Renderer attached to container');
 
 const raycaster = new THREE.Raycaster();
-const mouse = new THREE.Vector2();
-
-// Lights
-scene.add(new THREE.AmbientLight(0xffffff, {ambient}));
-scene.add(new THREE.HemisphereLight(0xffffff, {wood_dark}, 0.4));
-const dir = new THREE.DirectionalLight({light}, 1.0);
-dir.position.set(3, 5, 4);
-scene.add(dir);
-const fill = new THREE.PointLight({light}, 0.6, 20);
-fill.position.set(-3, 3, 3);
-scene.add(fill);
-
-// UV Light (for blacklight mode)
-const uvLight = new THREE.PointLight(0x8800ff, 0, 15);
-uvLight.position.set(0, 2, 3);
-scene.add(uvLight);
+const clickable = [];
 
 // Materials
-const woodMat = new THREE.MeshLambertMaterial({{ color: {wood} }});
-const darkMat = new THREE.MeshLambertMaterial({{ color: {wood_dark} }});
-const metalMat = new THREE.MeshLambertMaterial({{ color: {metal} }});
+const woodMat = new THREE.MeshLambertMaterial({{ color:{hx(c["wood"])} }});
+const darkWoodMat = new THREE.MeshLambertMaterial({{ color:{hx(c["wood_dark"])} }});
+const metalMat = new THREE.MeshLambertMaterial({{ color:{hx(c["metal"])} }});
+const boneMat = new THREE.MeshLambertMaterial({{ color:{hx(c["bone"])} }});
+const paperMat = new THREE.MeshLambertMaterial({{ color:{hx(c["paper"])} }});
+const leatherMat = new THREE.MeshLambertMaterial({{ color:{hx(c["leather"])} }});
+const glassMat = new THREE.MeshLambertMaterial({{ color:{hx(c["glass"])}, transparent:true, opacity:0.5 }});
+const waxMat = new THREE.MeshLambertMaterial({{ color:{hx(c["wax"])} }});
+const herbMat = new THREE.MeshLambertMaterial({{ color:{hx(c["herb"])} }});
+const cobwebMat = new THREE.MeshBasicMaterial({{ color:{hx(c["cobweb"])}, transparent:true, opacity:0.15, side:THREE.DoubleSide }});
 
-// Cabinet
-const W = 4, H = 3.2, D = 0.7, ROWS = 4, SH = H/ROWS;
+// Lights
+scene.add(new THREE.AmbientLight(0xffffff, 0.25));
+scene.add(new THREE.HemisphereLight(0xffffff, {hx(c["wood_dark"])}, 0.3));
 
-// Back (clickable for hidden compartment)
-const backGeo = new THREE.BoxGeometry(W, H, 0.05);
-const back = new THREE.Mesh(backGeo, darkMat);
-back.position.set(0, H/2, -D/2);
-back.userData = {{ isBack: true }};
-scene.add(back);
+// Main candle light
+const candleLight = new THREE.PointLight({hx(c["light"])}, 1.2, 8);
+candleLight.position.set(-0.9, 2.4, 0.3);
+candleLight.castShadow = true;
+scene.add(candleLight);
+
+// Fill lights
+const fillLight = new THREE.DirectionalLight({hx(c["light"])}, 0.5);
+fillLight.position.set(3, 5, 4);
+scene.add(fillLight);
+
+// UV light (hidden initially)
+const uvLight = new THREE.PointLight(0x6600cc, 0, 10);
+uvLight.position.set(0, 3, 2);
+scene.add(uvLight);
+
+// UV hidden elements group
+const uvElements = new THREE.Group();
+uvElements.visible = false;
+scene.add(uvElements);
+
+// ============ CABINET BODY ============
+const cabinet = new THREE.Group();
+
+// Main body
+const back = new THREE.Mesh(new THREE.BoxGeometry(3.2, 3.0, 0.08), darkWoodMat);
+back.position.set(0, 1.5, -0.45);
+back.receiveShadow = true;
+cabinet.add(back);
 
 // Sides
-[-1,1].forEach(s => {{
-    const side = new THREE.Mesh(new THREE.BoxGeometry(0.08, H, D), woodMat);
-    side.position.set(s*W/2, H/2, 0);
-    scene.add(side);
+[-1.6, 1.6].forEach(x => {{
+    const side = new THREE.Mesh(new THREE.BoxGeometry(0.08, 3.0, 0.95), woodMat);
+    side.position.set(x, 1.5, 0);
+    side.castShadow = true;
+    cabinet.add(side);
 }});
 
 // Top
-const top = new THREE.Mesh(new THREE.BoxGeometry(W+0.1, 0.1, D+0.1), woodMat);
-top.position.set(0, H+0.05, 0);
-scene.add(top);
+const top = new THREE.Mesh(new THREE.BoxGeometry(3.4, 0.1, 1.05), woodMat);
+top.position.set(0, 3.05, 0);
+cabinet.add(top);
 
-// Shelves
-for (let i=0; i<=ROWS; i++) {{
-    const shelf = new THREE.Mesh(new THREE.BoxGeometry(W-0.1, 0.04, D-0.08), woodMat);
-    shelf.position.set(0, i*SH, 0);
-    scene.add(shelf);
-}}
+// Bottom
+const bottom = new THREE.Mesh(new THREE.BoxGeometry(3.2, 0.12, 0.95), woodMat);
+bottom.position.set(0, 0.06, 0);
+cabinet.add(bottom);
 
-// Drawers at bottom
-const drawerGeo = new THREE.BoxGeometry(W-0.15, 0.25, D-0.1);
-const drawer = new THREE.Mesh(drawerGeo, darkMat);
-drawer.position.set(0, -0.15, 0.05);
-drawer.userData = {{ isDrawer: true }};
-scene.add(drawer);
+// Crown molding
+const crown = new THREE.Mesh(new THREE.BoxGeometry(3.5, 0.08, 0.15), woodMat);
+crown.position.set(0, 3.12, 0.42);
+cabinet.add(crown);
 
-// Drawer handles
-[-0.8, 0, 0.8].forEach(x => {{
-    const handle = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.03, 0.05), metalMat);
-    handle.position.set(x, -0.15, D/2);
-    scene.add(handle);
+// Shelves (4 shelves)
+const shelfYs = [0.65, 1.3, 1.95, 2.55];
+shelfYs.forEach(y => {{
+    const shelf = new THREE.Mesh(new THREE.BoxGeometry(3.1, 0.06, 0.88), woodMat);
+    shelf.position.set(0, y, 0);
+    shelf.receiveShadow = true;
+    cabinet.add(shelf);
 }});
 
-// Bottles
-const bottles = [];
-function slotPos(row, slot) {{
-    const startX = -W/2 + 0.45;
-    const spacing = (W - 0.9) / 4;
-    return {{ x: startX + slot*spacing, y: row*SH + 0.18, z: 0 }};
-}}
-
-// Unique bottle geometry builder
-function createBottle(b) {{
-    const g = new THREE.Group();
-    
-    // Hitbox
-    const hitbox = new THREE.Mesh(
-        new THREE.BoxGeometry(0.26, 0.48, 0.26),
-        new THREE.MeshBasicMaterial({{ transparent:true, opacity:0.001, depthWrite:false }})
+// ============ STAINS ON WOOD ============
+const stainPositions = [
+    {{ x:-0.5, y:0.68, type:'ring' }}, {{ x:0.8, y:1.33, type:'ring' }},
+    {{ x:-0.3, y:1.98, type:'spill' }}, {{ x:1.1, y:0.68, type:'dark' }}
+];
+stainPositions.forEach(s => {{
+    const stainColor = s.type === 'dark' ? {hx(c["stain_red"])} : {hx(c["stain_dark"])};
+    const stain = new THREE.Mesh(
+        new THREE.CircleGeometry(s.type === 'ring' ? 0.08 : 0.12, 12),
+        new THREE.MeshBasicMaterial({{ color: stainColor, transparent: true, opacity: 0.3 }})
     );
-    hitbox.userData = {{ bottleRef: b }};
-    g.add(hitbox);
-    
-    const glassMat = new THREE.MeshLambertMaterial({{ color:b.color, transparent:true, opacity:0.55 }});
-    const glassMatSolid = new THREE.MeshLambertMaterial({{ color:b.color, transparent:true, opacity:0.75 }});
-    const liqMat = new THREE.MeshLambertMaterial({{ color:b.liquid, transparent:true, opacity:0.85 }});
-    const corkMat = new THREE.MeshLambertMaterial({{ color:0x8b7355 }});
-    const metalMat = new THREE.MeshLambertMaterial({{ color:{metal} }});
-    const waxMat = new THREE.MeshLambertMaterial({{ color:0x880000 }});
-    const labelMat = new THREE.MeshLambertMaterial({{ color:0xffffee, side:THREE.DoubleSide }});
-    
-    let glassGroup = new THREE.Group();
-    let liquidY = 0, liquidH = 0, neckY = 0.16;
-    
-    // ===== UNIQUE BOTTLE SHAPES =====
-    
-    if (b.id === 'laudanum') {{
-        // Rectangular amber apothecary bottle
-        const body = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.28, 0.08), glassMat);
-        glassGroup.add(body);
-        const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.04, 0.08, 8), glassMat);
-        neck.position.y = 0.18;
-        glassGroup.add(neck);
-        // Embossed band
-        const band = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.015, 0.09), metalMat);
-        band.position.y = 0.08;
-        glassGroup.add(band);
-        liquidH = 0.24 * b.level; liquidY = -0.14 + liquidH/2 + 0.02; neckY = 0.24;
-        const liq = new THREE.Mesh(new THREE.BoxGeometry(0.10, liquidH, 0.065), liqMat);
-        liq.position.y = liquidY; g.add(liq);
-    }}
-    else if (b.id === 'chloroform') {{
-        // Hexagonal blue poison bottle with ridges
-        const body = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.08, 0.26, 6), glassMat);
-        glassGroup.add(body);
-        // Ridges (poison warning)
-        for (let i = 0; i < 4; i++) {{
-            const ridge = new THREE.Mesh(new THREE.BoxGeometry(0.005, 0.22, 0.16), glassMatSolid);
-            ridge.position.set(0, 0, 0);
-            ridge.rotation.y = i * Math.PI/3;
-            glassGroup.add(ridge);
-        }}
-        const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.035, 0.08, 6), glassMat);
-        neck.position.y = 0.17;
-        glassGroup.add(neck);
-        // Skull emboss
-        const skull = new THREE.Mesh(new THREE.SphereGeometry(0.025, 8, 6), glassMatSolid);
-        skull.position.set(0, 0.02, 0.075);
-        skull.scale.set(1, 1.2, 0.5);
-        glassGroup.add(skull);
-        liquidH = 0.22 * b.level; liquidY = -0.13 + liquidH/2;
-        const liq = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.065, liquidH, 6), liqMat);
-        liq.position.y = liquidY; g.add(liq); neckY = 0.23;
-    }}
-    else if (b.id === 'soothing') {{
-        // Round cheerful bottle with wide base
-        const body = new THREE.Mesh(new THREE.SphereGeometry(0.09, 16, 12), glassMat);
-        body.scale.set(1, 1.3, 1);
-        glassGroup.add(body);
-        const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.045, 0.1, 12), glassMat);
-        neck.position.y = 0.15;
-        glassGroup.add(neck);
-        liquidH = 0.18 * b.level; liquidY = -0.08 + liquidH/2;
-        const liq = new THREE.Mesh(new THREE.SphereGeometry(0.075, 12, 8), liqMat);
-        liq.scale.set(1, b.level * 1.1, 1);
-        liq.position.y = liquidY - 0.03; g.add(liq); neckY = 0.22;
-    }}
-    else if (b.id === 'mercury') {{
-        // Dark cylindrical with silver bands
-        const body = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.07, 0.3, 16), glassMat);
-        glassGroup.add(body);
-        for (let i = 0; i < 3; i++) {{
-            const ring = new THREE.Mesh(new THREE.TorusGeometry(0.065, 0.008, 8, 16), metalMat);
-            ring.position.y = -0.08 + i * 0.1;
-            ring.rotation.x = Math.PI/2;
-            glassGroup.add(ring);
-        }}
-        const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.035, 0.06, 12), glassMat);
-        neck.position.y = 0.18;
-        glassGroup.add(neck);
-        liquidH = 0.26 * b.level; liquidY = -0.15 + liquidH/2 + 0.02;
-        const liq = new THREE.Mesh(new THREE.CylinderGeometry(0.048, 0.058, liquidH, 12), liqMat);
-        liq.position.y = liquidY; g.add(liq); neckY = 0.23;
-    }}
-    else if (b.id === 'arsenic') {{
-        // Elegant oval perfume-style
-        const body = new THREE.Mesh(new THREE.SphereGeometry(0.08, 16, 12), glassMat);
-        body.scale.set(0.8, 1.4, 0.6);
-        glassGroup.add(body);
-        const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.03, 0.12, 12), glassMat);
-        neck.position.y = 0.15;
-        glassGroup.add(neck);
-        // Decorative stopper
-        const stopper = new THREE.Mesh(new THREE.SphereGeometry(0.03, 8, 6), glassMatSolid);
-        stopper.position.y = 0.24;
-        glassGroup.add(stopper);
-        liquidH = 0.16 * b.level; liquidY = -0.06 + liquidH/2;
-        const liq = new THREE.Mesh(new THREE.SphereGeometry(0.065, 12, 8), liqMat);
-        liq.scale.set(0.75, b.level * 1.2, 0.55);
-        liq.position.y = liquidY - 0.02; g.add(liq); neckY = 0.28;
-    }}
-    else if (b.id === 'ether') {{
-        // Ribbed brown bottle
-        const body = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.08, 0.28, 12), glassMat);
-        glassGroup.add(body);
-        // Vertical ribs
-        for (let i = 0; i < 8; i++) {{
-            const rib = new THREE.Mesh(new THREE.BoxGeometry(0.008, 0.26, 0.02), glassMatSolid);
-            const angle = (i / 8) * Math.PI * 2;
-            rib.position.set(Math.sin(angle) * 0.075, 0, Math.cos(angle) * 0.075);
-            rib.rotation.y = angle;
-            glassGroup.add(rib);
-        }}
-        const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.04, 0.07, 8), glassMat);
-        neck.position.y = 0.175;
-        glassGroup.add(neck);
-        liquidH = 0.24 * b.level; liquidY = -0.14 + liquidH/2 + 0.02;
-        const liq = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.065, liquidH, 12), liqMat);
-        liq.position.y = liquidY; g.add(liq); neckY = 0.24;
-    }}
-    else if (b.id === 'cocaine') {{
-        // Tall thin dropper bottle
-        const body = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.055, 0.32, 12), glassMat);
-        glassGroup.add(body);
-        const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.025, 0.08, 8), glassMat);
-        neck.position.y = 0.2;
-        glassGroup.add(neck);
-        // Dropper top
-        const dropper = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.018, 0.06, 8), new THREE.MeshLambertMaterial({{color:0x333333}}));
-        dropper.position.y = 0.27;
-        glassGroup.add(dropper);
-        const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.025, 8, 6), new THREE.MeshLambertMaterial({{color:0x444444}}));
-        bulb.position.y = 0.32;
-        glassGroup.add(bulb);
-        liquidH = 0.28 * b.level; liquidY = -0.16 + liquidH/2 + 0.02;
-        const liq = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.045, liquidH, 12), liqMat);
-        liq.position.y = liquidY; g.add(liq); neckY = 0.35;
-    }}
-    else if (b.id === 'strychnine') {{
-        // Hexagonal red poison bottle
-        const body = new THREE.Mesh(new THREE.CylinderGeometry(0.065, 0.075, 0.28, 6), glassMat);
-        glassGroup.add(body);
-        const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.04, 0.07, 6), glassMat);
-        neck.position.y = 0.175;
-        glassGroup.add(neck);
-        // Red wax seal
-        const wax = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.025, 12), waxMat);
-        wax.position.y = 0.22;
-        glassGroup.add(wax);
-        liquidH = 0.24 * b.level; liquidY = -0.14 + liquidH/2 + 0.02;
-        const liq = new THREE.Mesh(new THREE.CylinderGeometry(0.052, 0.062, liquidH, 6), liqMat);
-        liq.position.y = liquidY; g.add(liq); neckY = 0.25;
-    }}
-    else if (b.id === 'carbolic') {{
-        // Hospital-style ridged blue bottle
-        const body = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.07, 0.3, 8), glassMat);
-        glassGroup.add(body);
-        // Horizontal ridges
-        for (let i = 0; i < 5; i++) {{
-            const ridge = new THREE.Mesh(new THREE.TorusGeometry(0.068, 0.006, 6, 8), glassMatSolid);
-            ridge.position.y = -0.1 + i * 0.06;
-            ridge.rotation.x = Math.PI/2;
-            glassGroup.add(ridge);
-        }}
-        const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.035, 0.06, 8), glassMat);
-        neck.position.y = 0.18;
-        glassGroup.add(neck);
-        liquidH = 0.26 * b.level; liquidY = -0.15 + liquidH/2 + 0.02;
-        const liq = new THREE.Mesh(new THREE.CylinderGeometry(0.048, 0.058, liquidH, 8), liqMat);
-        liq.position.y = liquidY; g.add(liq); neckY = 0.23;
-    }}
-    else if (b.id === 'embalming') {{
-        // Large wide jug with handle
-        const body = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.11, 0.32, 16), glassMat);
-        glassGroup.add(body);
-        const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.06, 0.08, 12), glassMat);
-        neck.position.y = 0.2;
-        glassGroup.add(neck);
-        // Handle
-        const handle = new THREE.Mesh(new THREE.TorusGeometry(0.05, 0.012, 8, 12, Math.PI), glassMatSolid);
-        handle.position.set(0.11, 0.05, 0);
-        handle.rotation.z = Math.PI/2;
-        handle.rotation.y = Math.PI/2;
-        glassGroup.add(handle);
-        liquidH = 0.28 * b.level; liquidY = -0.16 + liquidH/2 + 0.02;
-        const liq = new THREE.Mesh(new THREE.CylinderGeometry(0.085, 0.095, liquidH, 12), liqMat);
-        liq.position.y = liquidY; g.add(liq); neckY = 0.26;
-    }}
-    else if (b.id === 'vita') {{
-        // Ornate teardrop with rose emblem
-        const body = new THREE.Mesh(new THREE.SphereGeometry(0.09, 16, 16), glassMat);
-        body.scale.set(1, 1.5, 1);
-        body.position.y = -0.02;
-        glassGroup.add(body);
-        const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.04, 0.12, 12), glassMat);
-        neck.position.y = 0.18;
-        glassGroup.add(neck);
-        // Rose emblem
-        const rose = new THREE.Mesh(new THREE.SphereGeometry(0.025, 8, 8), waxMat);
-        rose.position.set(0, 0.02, 0.09);
-        rose.scale.set(1, 1, 0.3);
-        glassGroup.add(rose);
-        // Ornate stopper
-        const stopper = new THREE.Mesh(new THREE.ConeGeometry(0.03, 0.06, 8), glassMatSolid);
-        stopper.position.y = 0.28;
-        glassGroup.add(stopper);
-        liquidH = 0.2 * b.level; liquidY = -0.08 + liquidH/2;
-        const liq = new THREE.Mesh(new THREE.SphereGeometry(0.075, 12, 12), liqMat);
-        liq.scale.set(0.9, b.level * 1.3, 0.9);
-        liq.position.y = liquidY - 0.02; g.add(liq); neckY = 0.32;
-    }}
-    else if (b.id === 'unmarked') {{
-        // Plain hexagonal no label
-        const body = new THREE.Mesh(new THREE.CylinderGeometry(0.065, 0.07, 0.26, 6), glassMat);
-        glassGroup.add(body);
-        const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.035, 0.06, 6), glassMat);
-        neck.position.y = 0.16;
-        glassGroup.add(neck);
-        liquidH = 0.22 * b.level; liquidY = -0.13 + liquidH/2;
-        const liq = new THREE.Mesh(new THREE.CylinderGeometry(0.052, 0.058, liquidH, 6), liqMat);
-        liq.position.y = liquidY; g.add(liq); neckY = 0.21;
-    }}
-    else if (b.id === 'unwilling') {{
-        // Black rectangular sinister
-        const body = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.3, 0.08), glassMat);
-        glassGroup.add(body);
-        const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.035, 0.07, 8), glassMat);
-        neck.position.y = 0.185;
-        glassGroup.add(neck);
-        // Black wax seal
-        const seal = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.04, 12), new THREE.MeshLambertMaterial({{color:0x111111}}));
-        seal.position.y = 0.24;
-        glassGroup.add(seal);
-        liquidH = 0.26 * b.level; liquidY = -0.15 + liquidH/2 + 0.02;
-        const liq = new THREE.Mesh(new THREE.BoxGeometry(0.085, liquidH, 0.065), liqMat);
-        liq.position.y = liquidY; g.add(liq); neckY = 0.28;
-    }}
-    else if (b.id === 'mercy') {{
-        // Tiny vial with skull stopper
-        const body = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.035, 0.18, 12), glassMat);
-        glassGroup.add(body);
-        const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.02, 0.04, 8), glassMat);
-        neck.position.y = 0.11;
-        glassGroup.add(neck);
-        // Skull stopper
-        const skullTop = new THREE.Mesh(new THREE.SphereGeometry(0.025, 8, 6), new THREE.MeshLambertMaterial({{color:0xeeeecc}}));
-        skullTop.position.y = 0.16;
-        skullTop.scale.set(1, 0.8, 0.8);
-        glassGroup.add(skullTop);
-        liquidH = 0.15 * b.level; liquidY = -0.09 + liquidH/2;
-        const liq = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.028, liquidH, 12), liqMat);
-        liq.position.y = liquidY; g.add(liq); neckY = 0.19;
-    }}
-    else if (b.id === 'blood_sc') {{
-        // Test tube with cork
-        const body = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.28, 12), glassMat);
-        glassGroup.add(body);
-        // Rounded bottom
-        const bottom = new THREE.Mesh(new THREE.SphereGeometry(0.025, 12, 8, 0, Math.PI*2, 0, Math.PI/2), glassMat);
-        bottom.position.y = -0.14;
-        bottom.rotation.x = Math.PI;
-        glassGroup.add(bottom);
-        // Lip at top
-        const lip = new THREE.Mesh(new THREE.TorusGeometry(0.028, 0.006, 6, 12), glassMatSolid);
-        lip.position.y = 0.14;
-        lip.rotation.x = Math.PI/2;
-        glassGroup.add(lip);
-        liquidH = 0.24 * b.level; liquidY = -0.12 + liquidH/2;
-        const liq = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, liquidH, 12), liqMat);
-        liq.position.y = liquidY; g.add(liq); neckY = 0.18;
-    }}
-    else if (b.id === 'teeth') {{
-        // Wide mouth specimen jar
-        const body = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.09, 0.22, 16), glassMat);
-        glassGroup.add(body);
-        // Screw-top lid
-        const lid = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.11, 0.04, 16), metalMat);
-        lid.position.y = 0.13;
-        glassGroup.add(lid);
-        // Floating teeth particles (will animate)
-        liquidH = 0.18 * b.level; liquidY = -0.09 + liquidH/2;
-        const liq = new THREE.Mesh(new THREE.CylinderGeometry(0.085, 0.075, liquidH, 12), liqMat);
-        liq.position.y = liquidY; g.add(liq); neckY = 0.18;
-    }}
-    else if (b.id === 'leeches') {{
-        // Rounded jar with ventilated lid
-        const body = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.1, 0.24, 16), glassMat);
-        glassGroup.add(body);
-        // Domed top
-        const dome = new THREE.Mesh(new THREE.SphereGeometry(0.09, 12, 8, 0, Math.PI*2, 0, Math.PI/2), glassMat);
-        dome.position.y = 0.12;
-        glassGroup.add(dome);
-        // Ventilated metal lid
-        const lid = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.03, 12), metalMat);
-        lid.position.y = 0.18;
-        glassGroup.add(lid);
-        liquidH = 0.2 * b.level; liquidY = -0.1 + liquidH/2;
-        const liq = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.085, liquidH, 12), liqMat);
-        liq.position.y = liquidY; g.add(liq); neckY = 0.22;
-    }}
-    else if (b.id === 'essence') {{
-        // Ceramic pot with lid
-        const potMat = new THREE.MeshLambertMaterial({{color:0xd4c4a8}});
-        const body = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.09, 0.2, 16), potMat);
-        glassGroup.add(body);
-        // Decorative rim
-        const rim = new THREE.Mesh(new THREE.TorusGeometry(0.085, 0.015, 8, 16), potMat);
-        rim.position.y = 0.1;
-        rim.rotation.x = Math.PI/2;
-        glassGroup.add(rim);
-        // Lid
-        const lid = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.08, 0.04, 12), potMat);
-        lid.position.y = 0.14;
-        glassGroup.add(lid);
-        const knob = new THREE.Mesh(new THREE.SphereGeometry(0.02, 8, 6), potMat);
-        knob.position.y = 0.18;
-        glassGroup.add(knob);
-        neckY = 0.2;
-        // No visible liquid for ceramic
-    }}
-    else if (b.id === 'tapeworm') {{
-        // Tall specimen tube
-        const body = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.05, 0.34, 12), glassMat);
-        glassGroup.add(body);
-        // Base stand
-        const base = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.07, 0.03, 12), metalMat);
-        base.position.y = -0.185;
-        glassGroup.add(base);
-        const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.035, 0.05, 8), glassMat);
-        neck.position.y = 0.195;
-        glassGroup.add(neck);
-        liquidH = 0.3 * b.level; liquidY = -0.15 + liquidH/2;
-        const liq = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.04, liquidH, 12), liqMat);
-        liq.position.y = liquidY; g.add(liq); neckY = 0.25;
-    }}
-    else if (b.id === 'brain') {{
-        // Ornate Victorian jar with dome
-        const body = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.1, 0.22, 12), glassMat);
-        glassGroup.add(body);
-        // Ornate band
-        const band = new THREE.Mesh(new THREE.TorusGeometry(0.095, 0.01, 6, 12), metalMat);
-        band.position.y = 0.05;
-        band.rotation.x = Math.PI/2;
-        glassGroup.add(band);
-        // Dome lid
-        const dome = new THREE.Mesh(new THREE.SphereGeometry(0.085, 12, 8, 0, Math.PI*2, 0, Math.PI/2), metalMat);
-        dome.position.y = 0.11;
-        glassGroup.add(dome);
-        const knob = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.02, 0.04, 8), metalMat);
-        knob.position.y = 0.19;
-        glassGroup.add(knob);
-        liquidH = 0.18 * b.level; liquidY = -0.09 + liquidH/2;
-        const liq = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.085, liquidH, 12), liqMat);
-        liq.position.y = liquidY; g.add(liq); neckY = 0.22;
-    }}
-    else {{
-        // Default bottle
-        const body = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.08, 0.3, 12), glassMat);
-        glassGroup.add(body);
-        const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.04, 0.06, 8), glassMat);
-        neck.position.y = 0.18;
-        glassGroup.add(neck);
-        liquidH = 0.26 * b.level; liquidY = -0.15 + liquidH/2 + 0.02;
-        const liq = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.065, liquidH, 12), liqMat);
-        liq.position.y = liquidY; g.add(liq); neckY = 0.23;
-    }}
-    
-    g.add(glassGroup);
-    
-    // Cork (for non-special tops)
-    if (!['arsenic','cocaine','strychnine','unwilling','mercy','teeth','leeches','essence','brain'].includes(b.id)) {{
-        const cork = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.035, 0.045, 8), corkMat);
-        cork.position.y = neckY;
-        g.add(cork);
-    }}
-    
-    // Label (varied styles)
-    if (b.id !== 'unmarked' && b.id !== 'essence') {{
-        const labelW = ['laudanum','unwilling','embalming'].includes(b.id) ? 0.11 : 0.09;
-        const labelH = ['vita','brain'].includes(b.id) ? 0.1 : 0.07;
-        const label = new THREE.Mesh(new THREE.PlaneGeometry(labelW, labelH), labelMat);
-        const labelZ = ['laudanum','unwilling'].includes(b.id) ? 0.042 : 
-                       ['embalming'].includes(b.id) ? 0.11 : 
-                       ['teeth','leeches','brain'].includes(b.id) ? 0.1 : 0.085;
-        label.position.set(0, 0, labelZ);
-        g.add(label);
-    }}
-    
-    return g;
-}}
-
-BOTTLES.forEach((b, i) => {{
-    try {{
-        const g = createBottle(b);
-        const p = slotPos(b.row, b.slot);
-        g.position.set(p.x, p.y, p.z);
-        g.userData = b;
-        scene.add(g);
-        bottles.push(g);
-    }} catch(e) {{
-        console.error('Error creating bottle', i, b.id, e);
+    stain.rotation.x = -Math.PI / 2;
+    stain.position.set(s.x, s.y + 0.035, 0.1);
+    cabinet.add(stain);
+    // Ring stain: hollow center
+    if (s.type === 'ring') {{
+        const inner = new THREE.Mesh(
+            new THREE.CircleGeometry(0.05, 12),
+            new THREE.MeshBasicMaterial({{ color: {hx(c["wood"])}, transparent: true, opacity: 0.4 }})
+        );
+        inner.rotation.x = -Math.PI / 2;
+        inner.position.set(s.x, s.y + 0.036, 0.1);
+        cabinet.add(inner);
     }}
 }});
 
-console.log('Bottles created:', bottles.length);
+scene.add(cabinet);
 
-// Camera controls
-let isDown=false, hasMoved=false, px=0, py=0, theta=0, phi=1.2, dist=6;
-const target = new THREE.Vector3(0, 1.3, 0);
+// ============ BOTTLES ============
+const bottleData = [
+    // Shelf 1 (bottom)
+    {{ x:-1.0, y:0.68, h:0.35, r:0.06, color:0xaa4444, label:'Laudanum', desc:'Tincture of opium. For pain.', lore:'Half empty. Someone has been dosing.' }},
+    {{ x:-0.5, y:0.68, h:0.28, r:0.07, color:0x44aa44, label:'Strychnine', desc:'Poison. Or cure, in small doses.', lore:'Fitzroy kept this close. Always.' }},
+    {{ x:0.0, y:0.68, h:0.4, r:0.05, color:0x4444aa, label:'Mercury Chloride', desc:'Antiseptic. Highly toxic.', lore:'The standard treatment. The standard death.' }},
+    {{ x:0.5, y:0.68, h:0.3, r:0.065, color:0xaa8844, label:'Chloroform', desc:'Anaesthetic. Sweet-smelling oblivion.', lore:'How many were silenced with this?' }},
+    // Shelf 2
+    {{ x:-0.8, y:1.33, h:0.32, r:0.055, color:0x884488, label:'Belladonna', desc:'Deadly nightshade extract.', lore:'"Beautiful lady." The irony is not lost.' }},
+    {{ x:-0.2, y:1.33, h:0.38, r:0.06, color:0xcc8833, label:'Vita Aeterna', desc:'The label is handwritten. The liquid glows faintly.', lore:'Protocol Seven. The key ingredient.' }},
+    {{ x:0.5, y:1.33, h:0.25, r:0.07, color:0x448888, label:'Ether', desc:'Volatile anaesthetic compound.', lore:'The smell of progress. And forgetting.' }},
+    {{ x:1.1, y:1.33, h:0.35, r:0.05, color:0x888844, label:'Arsenic', desc:'The king of poisons.', lore:'Three deaths. Same symptoms. Coincidence?' }},
+    // Shelf 3
+    {{ x:-1.0, y:1.98, h:0.3, r:0.06, color:0xaa2222, label:'Blood Sample', desc:'Dark. Almost black. Not human?', lore:'Label reads: "S.C." Sebastian Carlisle.' }},
+    {{ x:-0.3, y:1.98, h:0.35, r:0.055, color:0x66aa66, label:'Digitalis', desc:'Foxglove extract. Heart medicine.', lore:'The difference between medicine and murder is dosage.' }},
+    {{ x:0.4, y:1.98, h:0.28, r:0.065, color:0xdddd44, label:'Phosphorus', desc:'Glows in darkness. Burns in light.', lore:'Used in the development process. Details redacted.' }},
+    {{ x:1.0, y:1.98, h:0.32, r:0.06, color:0x222222, label:'[UNMARKED]', desc:'No label. The glass is warm to the touch.', lore:'DO NOT OPEN. DO NOT OPEN. DO NOT OPEN.' }},
+    // Shelf 4 (top)
+    {{ x:-0.6, y:2.58, h:0.22, r:0.05, color:0xcc4444, label:'Morphine', desc:'Distilled mercy.', lore:'Requisitioned in bulk. For what?' }},
+    {{ x:0.1, y:2.58, h:0.3, r:0.06, color:0x8888cc, label:'Formaldehyde', desc:'Preservation fluid.', lore:'The dead must be kept fresh for study.' }},
+    {{ x:0.8, y:2.58, h:0.26, r:0.055, color:0xccaa88, label:'Quinine', desc:'Antimalarial. Bitter truth in a bottle.', lore:'Imported. Expensive. Who pays?' }},
+];
+
+const bottles = [];
+bottleData.forEach((b, idx) => {{
+    const bottle = new THREE.Group();
+
+    // Body
+    const body = new THREE.Mesh(
+        new THREE.CylinderGeometry(b.r, b.r * 0.9, b.h, 12),
+        new THREE.MeshLambertMaterial({{
+            color: b.color, transparent: true, opacity: 0.65,
+            emissive: b.color, emissiveIntensity: MODE === 'gothic' ? 0.15 : 0.05
+        }})
+    );
+    body.position.y = b.h / 2;
+    body.castShadow = true;
+    bottle.add(body);
+
+    // Neck
+    const neck = new THREE.Mesh(
+        new THREE.CylinderGeometry(b.r * 0.4, b.r * 0.6, b.h * 0.25, 8),
+        new THREE.MeshLambertMaterial({{ color: b.color, transparent: true, opacity: 0.5 }})
+    );
+    neck.position.y = b.h + b.h * 0.12;
+    bottle.add(neck);
+
+    // Cork
+    const cork = new THREE.Mesh(
+        new THREE.CylinderGeometry(b.r * 0.42, b.r * 0.38, 0.06, 8),
+        new THREE.MeshLambertMaterial({{ color: 0x8b7355 }})
+    );
+    cork.position.y = b.h + b.h * 0.27;
+    bottle.add(cork);
+
+    // Liquid inside
+    const liquid = new THREE.Mesh(
+        new THREE.CylinderGeometry(b.r * 0.85, b.r * 0.82, b.h * 0.6, 10),
+        new THREE.MeshBasicMaterial({{ color: b.color, transparent: true, opacity: 0.35 }})
+    );
+    liquid.position.y = b.h * 0.32;
+    bottle.add(liquid);
+
+    // Label
+    const label = new THREE.Mesh(
+        new THREE.PlaneGeometry(b.r * 1.8, b.h * 0.35),
+        new THREE.MeshLambertMaterial({{ color: {hx(c["paper"])}, side: THREE.DoubleSide }})
+    );
+    label.position.set(0, b.h * 0.45, b.r + 0.005);
+    bottle.add(label);
+
+    bottle.position.set(b.x, b.y, 0.05);
+    bottle.userData = {{ type: 'bottle', title: b.label, desc: b.desc, lore: INTENSITY >= 2 ? b.lore : '' }};
+
+    scene.add(bottle);
+    bottles.push(bottle);
+    clickable.push(bottle);
+
+    // UV hidden text for select bottles
+    if (idx === 5 || idx === 11) {{ // Vita Aeterna, Unmarked
+        const uvText = new THREE.Mesh(
+            new THREE.PlaneGeometry(b.r * 2, b.h * 0.25),
+            new THREE.MeshBasicMaterial({{ color: 0xaa00ff, transparent: true, opacity: 0.8, side: THREE.DoubleSide }})
+        );
+        uvText.position.set(b.x, b.y + b.h * 0.7, b.r + 0.02);
+        uvElements.add(uvText);
+    }}
+}});
+
+// ============ COBWEBS ============
+const cobwebPositions = [
+    {{ x: -1.4, y: 2.8, z: -0.2 }}, {{ x: 1.4, y: 2.65, z: -0.1 }},
+    {{ x: -0.7, y: 1.85, z: 0.15 }}, {{ x: 1.3, y: 1.2, z: 0.1 }},
+];
+cobwebPositions.forEach(pos => {{
+    const web = new THREE.Mesh(
+        new THREE.PlaneGeometry(0.35, 0.3),
+        cobwebMat
+    );
+    web.position.set(pos.x, pos.y, pos.z);
+    web.rotation.y = Math.random() * 0.5;
+    web.rotation.z = Math.random() * 0.3;
+    scene.add(web);
+
+    // Thread lines
+    for (let i = 0; i < 3; i++) {{
+        const thread = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.001, 0.001, 0.2 + Math.random() * 0.15, 3),
+            cobwebMat
+        );
+        thread.position.set(pos.x + (Math.random() - 0.5) * 0.2, pos.y - 0.1, pos.z + 0.02);
+        thread.rotation.z = Math.random() * Math.PI;
+        scene.add(thread);
+    }}
+}});
+
+// ============ SKULL (MEMENTO MORI) ============
+const skull = new THREE.Group();
+skull.userData = {{ type: 'skull', title: 'Human Skull', desc: 'Memento mori. A reminder of what awaits.', lore: INTENSITY >= 3 ? 'The jaw is wired shut. What was it trying to say?' : 'Teaching specimen. Probably.' }};
+
+// Cranium
+const cranium = new THREE.Mesh(
+    new THREE.SphereGeometry(0.16, 16, 12),
+    boneMat
+);
+cranium.scale.set(1, 1.1, 1.2);
+cranium.position.y = 0.16;
+skull.add(cranium);
+
+// Eye sockets
+[-0.05, 0.05].forEach(x => {{
+    const socket = new THREE.Mesh(
+        new THREE.SphereGeometry(0.04, 8, 6),
+        new THREE.MeshBasicMaterial({{ color: 0x111111 }})
+    );
+    socket.position.set(x, 0.15, 0.14);
+    skull.add(socket);
+
+    // Eerie glow in gothic
+    if (MODE === 'gothic' && INTENSITY >= 4) {{
+        const eyeGlow = new THREE.Mesh(
+            new THREE.SphereGeometry(0.02, 6, 4),
+            new THREE.MeshBasicMaterial({{ color: 0xff2200, transparent: true, opacity: 0.6 }})
+        );
+        eyeGlow.position.set(x, 0.15, 0.13);
+        skull.add(eyeGlow);
+    }}
+}});
+
+// Nose
+const nose = new THREE.Mesh(
+    new THREE.SphereGeometry(0.018, 6, 4),
+    new THREE.MeshBasicMaterial({{ color: 0x111111 }})
+);
+nose.position.set(0, 0.1, 0.15);
+skull.add(nose);
+
+// Jaw
+const jaw = new THREE.Mesh(
+    new THREE.BoxGeometry(0.14, 0.04, 0.08),
+    boneMat
+);
+jaw.position.set(0, 0.04, 0.1);
+skull.add(jaw);
+
+// Teeth
+for (let i = 0; i < 6; i++) {{
+    const tooth = new THREE.Mesh(
+        new THREE.BoxGeometry(0.015, 0.02, 0.01),
+        new THREE.MeshLambertMaterial({{ color: 0xddddbb }})
+    );
+    tooth.position.set(-0.04 + i * 0.016, 0.065, 0.13);
+    skull.add(tooth);
+}}
+
+skull.position.set(1.1, 3.12, 0.15);
+skull.rotation.y = -0.3;
+scene.add(skull);
+clickable.push(skull);
+
+// ============ CANDLE WITH DRIPPING WAX ============
+const candleGroup = new THREE.Group();
+candleGroup.userData = {{ type: 'candle', title: 'Tallow Candle', desc: 'The sole light source. Wax pools at the base.', lore: 'It burns lower every time you look away.' }};
+
+// Holder
+const candleHolder = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.1, 0.12, 0.04, 12),
+    metalMat
+);
+candleGroup.add(candleHolder);
+
+// Handle
+const handle = new THREE.Mesh(
+    new THREE.TorusGeometry(0.08, 0.012, 6, 12, Math.PI),
+    metalMat
+);
+handle.rotation.y = Math.PI / 2;
+handle.position.set(0.08, 0.02, 0);
+candleGroup.add(handle);
+
+// Candle body
+const candleBody = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.035, 0.04, 0.25, 8),
+    new THREE.MeshLambertMaterial({{ color: 0xfffff0 }})
+);
+candleBody.position.y = 0.145;
+candleGroup.add(candleBody);
+
+// Flame
+const flame = new THREE.Mesh(
+    new THREE.SphereGeometry(0.025, 6, 4),
+    new THREE.MeshBasicMaterial({{ color: {hx(c["light"])}, transparent: true, opacity: 0.95 }})
+);
+flame.scale.set(0.7, 1.4, 0.7);
+flame.position.y = 0.3;
+candleGroup.add(flame);
+
+// Flame inner
+const flameInner = new THREE.Mesh(
+    new THREE.SphereGeometry(0.012, 4, 3),
+    new THREE.MeshBasicMaterial({{ color: 0xffffff, transparent: true, opacity: 0.9 }})
+);
+flameInner.position.y = 0.29;
+candleGroup.add(flameInner);
+
+// Wax drips
+const drips = [
+    {{ x: 0.03, h: 0.06 }}, {{ x: -0.02, h: 0.08 }}, {{ x: 0.01, h: 0.04 }}
+];
+drips.forEach(d => {{
+    const drip = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.008, 0.005, d.h, 6),
+        new THREE.MeshLambertMaterial({{ color: 0xfffff0 }})
+    );
+    drip.position.set(d.x, 0.04 + d.h / 2, 0.035);
+    candleGroup.add(drip);
+}});
+
+// Wax pool
+const waxPool = new THREE.Mesh(
+    new THREE.CircleGeometry(0.08, 12),
+    new THREE.MeshLambertMaterial({{ color: 0xfffff0, transparent: true, opacity: 0.6 }})
+);
+waxPool.rotation.x = -Math.PI / 2;
+waxPool.position.y = 0.005;
+candleGroup.add(waxPool);
+
+candleGroup.position.set(-0.9, 3.12, 0.3);
+scene.add(candleGroup);
+clickable.push(candleGroup);
+
+// ============ LEATHER-BOUND BOOKS ============
+const books = new THREE.Group();
+books.userData = {{ type: 'books', title: 'Medical Texts', desc: 'Gray\\'s Anatomy. Fitzroy\\'s Compendium. One unmarked volume.', lore: INTENSITY >= 3 ? 'The unmarked book falls open to a page about preserving consciousness during vivisection.' : 'Standard reference material.' }};
+
+const bookColors = [0x2a1510, 0x1a2a1a, 0x1a1a2a, 0x3a2515];
+bookColors.forEach((bc, i) => {{
+    const book = new THREE.Mesh(
+        new THREE.BoxGeometry(0.18, 0.28, 0.04 + i * 0.008),
+        new THREE.MeshLambertMaterial({{ color: bc }})
+    );
+    book.position.set(0, i * 0.045, 0);
+    book.rotation.y = (Math.random() - 0.5) * 0.15;
+
+    // Gold detail on spine
+    const spine = new THREE.Mesh(
+        new THREE.PlaneGeometry(0.02, 0.25),
+        new THREE.MeshBasicMaterial({{ color: {hx(c["metal"])}, transparent: true, opacity: 0.5 }})
+    );
+    spine.position.set(-0.091, 0, 0);
+    spine.rotation.y = -Math.PI / 2;
+    book.add(spine);
+
+    books.add(book);
+}});
+
+// One book pulled out
+const pulledBook = new THREE.Mesh(
+    new THREE.BoxGeometry(0.18, 0.28, 0.035),
+    leatherMat
+);
+pulledBook.position.set(0.06, 0.18, 0.05);
+pulledBook.rotation.y = 0.2;
+books.add(pulledBook);
+
+books.position.set(-1.1, 3.14, -0.1);
+scene.add(books);
+clickable.push(books);
+
+// ============ BRASS BALANCE SCALES ============
+const scales = new THREE.Group();
+scales.userData = {{ type: 'scales', title: 'Apothecary Scales', desc: 'Brass balance. One pan lower than the other.', lore: INTENSITY >= 3 ? 'The lower pan holds a residue. Reddish. Organic.' : 'For measuring precise doses.' }};
+
+// Pillar
+const pillar = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.02, 0.35, 8), metalMat);
+pillar.position.y = 0.175;
+scales.add(pillar);
+
+// Base
+const sBase = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.1, 0.02, 12), metalMat);
+scales.add(sBase);
+
+// Beam
+const beam = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.01, 0.015), metalMat);
+beam.position.y = 0.36;
+beam.rotation.z = 0.08; // tilted
+scales.add(beam);
+
+// Pans
+[-0.16, 0.16].forEach((x, i) => {{
+    const panY = 0.3 + (i === 0 ? -0.02 : 0.02);
+    const pan = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.008, 12), metalMat);
+    pan.position.set(x, panY, 0);
+    scales.add(pan);
+    // Chains
+    for (let c = 0; c < 3; c++) {{
+        const chain = new THREE.Mesh(new THREE.CylinderGeometry(0.002, 0.002, 0.06, 4), metalMat);
+        const a = (c / 3) * Math.PI * 2;
+        chain.position.set(x + Math.cos(a) * 0.04, panY + 0.035, Math.sin(a) * 0.04);
+        scales.add(chain);
+    }}
+}});
+
+scales.position.set(0.7, 2.58, 0.2);
+scene.add(scales);
+clickable.push(scales);
+
+// ============ MORTAR AND PESTLE ============
+const mortar = new THREE.Group();
+mortar.userData = {{ type: 'mortar', title: 'Mortar & Pestle', desc: 'Stone. Well-used. Stained with unknown compounds.', lore: 'The residue matches no known pharmaceutical.' }};
+
+// Mortar bowl
+const mortarBowl = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.07, 0.05, 0.08, 12),
+    new THREE.MeshLambertMaterial({{ color: 0x666655 }})
+);
+mortarBowl.position.y = 0.04;
+mortar.add(mortarBowl);
+
+// Pestle
+const pestle = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.012, 0.025, 0.16, 8),
+    new THREE.MeshLambertMaterial({{ color: 0x777766 }})
+);
+pestle.position.set(0.03, 0.1, 0.02);
+pestle.rotation.z = 0.5;
+pestle.rotation.x = -0.3;
+mortar.add(pestle);
+
+mortar.position.set(-0.3, 2.58, 0.25);
+scene.add(mortar);
+clickable.push(mortar);
+
+// ============ VICTORIAN SYRINGE ============
+const syringe = new THREE.Group();
+syringe.userData = {{ type: 'syringe', title: 'Hypodermic Syringe', desc: 'Brass and glass. Victorian medical instrument.', lore: INTENSITY >= 3 ? 'Residue inside: laudanum and something else. Something unknown.' : 'Standard issue.' }};
+
+// Barrel (glass)
+const barrel = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.015, 0.015, 0.18, 8),
+    new THREE.MeshLambertMaterial({{ color: 0xccddee, transparent: true, opacity: 0.5 }})
+);
+barrel.rotation.z = Math.PI / 2;
+syringe.add(barrel);
+
+// Plunger handle
+const plunger = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.02, 0.02, 0.03, 6),
+    metalMat
+);
+plunger.position.set(-0.1, 0, 0);
+plunger.rotation.z = Math.PI / 2;
+syringe.add(plunger);
+
+// Needle
+const needle = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.002, 0.001, 0.06, 4),
+    new THREE.MeshLambertMaterial({{ color: 0xcccccc }})
+);
+needle.position.set(0.12, 0, 0);
+needle.rotation.z = Math.PI / 2;
+syringe.add(needle);
+
+// Finger rings
+const ring = new THREE.Mesh(new THREE.TorusGeometry(0.025, 0.004, 4, 8), metalMat);
+ring.position.set(-0.09, 0, 0);
+ring.rotation.x = Math.PI / 2;
+syringe.add(ring);
+
+syringe.position.set(0.2, 1.35, 0.35);
+syringe.rotation.y = 0.3;
+scene.add(syringe);
+clickable.push(syringe);
+
+// ============ MAGNIFYING GLASS ============
+const magGlass = new THREE.Group();
+magGlass.userData = {{ type: 'magnifier', title: 'Magnifying Glass', desc: 'Brass frame. The lens distorts what lies beneath.', lore: 'Under magnification, the labels reveal a second language.' }};
+
+// Lens
+const lens = new THREE.Mesh(
+    new THREE.CircleGeometry(0.06, 16),
+    new THREE.MeshLambertMaterial({{ color: 0xccddff, transparent: true, opacity: 0.3, side: THREE.DoubleSide }})
+);
+magGlass.add(lens);
+
+// Frame
+const frame = new THREE.Mesh(
+    new THREE.TorusGeometry(0.06, 0.006, 6, 16),
+    metalMat
+);
+magGlass.add(frame);
+
+// Handle
+const mgHandle = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.008, 0.01, 0.15, 6),
+    metalMat
+);
+mgHandle.position.set(0, -0.12, 0);
+magGlass.add(mgHandle);
+
+magGlass.position.set(1.1, 1.35, 0.3);
+magGlass.rotation.z = -0.4;
+magGlass.rotation.x = -0.2;
+scene.add(magGlass);
+clickable.push(magGlass);
+
+// ============ POCKET WATCH ============
+const watch = new THREE.Group();
+watch.userData = {{ type: 'watch', title: 'Pocket Watch', desc: 'Gold case. The hands have stopped at 11:47.', lore: INTENSITY >= 3 ? 'Time of death? Or time of the next appointment?' : 'Engraved: A.F.' }};
+
+const watchCase = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.01, 16), metalMat);
+watch.add(watchCase);
+const watchFace = new THREE.Mesh(
+    new THREE.CircleGeometry(0.035, 16),
+    new THREE.MeshLambertMaterial({{ color: 0xfffff0 }})
+);
+watchFace.position.z = 0.006;
+watch.add(watchFace);
+
+// Chain
+for (let i = 0; i < 8; i++) {{
+    const link = new THREE.Mesh(
+        new THREE.TorusGeometry(0.008, 0.002, 4, 6),
+        metalMat
+    );
+    link.position.set(0.04 + i * 0.015, 0.01 * Math.sin(i), 0);
+    link.rotation.y = Math.PI / 2;
+    watch.add(link);
+}}
+
+watch.position.set(-0.6, 1.35, 0.4);
+watch.rotation.x = -Math.PI / 2.5;
+scene.add(watch);
+clickable.push(watch);
+
+// ============ WAX SEAL STAMPS ============
+const waxGroup = new THREE.Group();
+waxGroup.userData = {{ type: 'wax', title: 'Sealing Wax & Stamp', desc: 'Red wax. A seal bearing a rose motif.', lore: 'The Red Rose Society\\'s official correspondence seal.' }};
+
+// Wax stick
+const waxStick = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.012, 0.012, 0.12, 6),
+    waxMat
+);
+waxStick.rotation.z = Math.PI / 2;
+waxStick.position.y = 0.012;
+waxGroup.add(waxStick);
+
+// Stamp
+const stamp = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.015, 0.08, 8), darkWoodMat);
+stamp.position.set(0.08, 0.04, 0);
+waxGroup.add(stamp);
+
+// Wax blob
+const blob = new THREE.Mesh(
+    new THREE.SphereGeometry(0.02, 8, 6),
+    waxMat
+);
+blob.scale.set(1.5, 0.4, 1.5);
+blob.position.set(-0.05, 0.005, 0.03);
+waxGroup.add(blob);
+
+waxGroup.position.set(0.5, 0.68, 0.35);
+scene.add(waxGroup);
+clickable.push(waxGroup);
+
+// ============ DRIED HERBS ============
+const herbBundles = [];
+const herbPositions = [
+    {{ x: -0.8, desc: 'Dried lavender. For calm. Or concealment.' }},
+    {{ x: -0.3, desc: 'Hemlock sprigs. Beautiful. Deadly.' }},
+    {{ x: 0.2, desc: 'Wormwood. The base of absinthe.' }},
+    {{ x: 0.7, desc: 'Belladonna leaves. Dried but still potent.' }},
+];
+herbPositions.forEach((h, i) => {{
+    const herb = new THREE.Group();
+    herb.userData = {{ type: 'herb', title: 'Dried Herbs', desc: h.desc, lore: '' }};
+
+    // Bundle
+    for (let s = 0; s < 4; s++) {{
+        const stem = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.003, 0.003, 0.18 + Math.random() * 0.08, 4),
+            herbMat
+        );
+        stem.position.set((Math.random() - 0.5) * 0.02, -0.06, (Math.random() - 0.5) * 0.02);
+        herb.add(stem);
+
+        // Leaves
+        const leaf = new THREE.Mesh(
+            new THREE.PlaneGeometry(0.03, 0.02),
+            new THREE.MeshLambertMaterial({{ color: {hx(c["herb"])}, side: THREE.DoubleSide }})
+        );
+        leaf.position.set(stem.position.x, -0.12 - Math.random() * 0.04, stem.position.z + 0.01);
+        leaf.rotation.z = Math.random() * 0.5;
+        herb.add(leaf);
+    }}
+
+    // Twine
+    const twine = new THREE.Mesh(
+        new THREE.TorusGeometry(0.015, 0.003, 4, 8),
+        new THREE.MeshLambertMaterial({{ color: 0x8b7355 }})
+    );
+    twine.position.y = 0.02;
+    herb.add(twine);
+
+    herb.position.set(h.x, 3.0, 0.15);
+    herb.rotation.x = Math.PI;
+    scene.add(herb);
+    herbBundles.push(herb);
+    clickable.push(herb);
+}});
+
+// ============ MOUSE (Intensity 2+) ============
+let mouseGroup = null;
+if (INTENSITY >= 2) {{
+    mouseGroup = new THREE.Group();
+    mouseGroup.userData = {{ type: 'mouse', title: 'A Mouse', desc: 'Small. Quick. Watching you with black eyes.', lore: INTENSITY >= 4 ? 'It\\'s been gnawing on something. Something pink.' : 'A common visitor.' }};
+
+    const mouseBody = new THREE.Mesh(
+        new THREE.SphereGeometry(0.03, 8, 6),
+        new THREE.MeshLambertMaterial({{ color: 0x6a5a4a }})
+    );
+    mouseBody.scale.set(1, 0.8, 1.5);
+    mouseGroup.add(mouseBody);
+
+    const mouseHead = new THREE.Mesh(
+        new THREE.SphereGeometry(0.018, 6, 5),
+        new THREE.MeshLambertMaterial({{ color: 0x6a5a4a }})
+    );
+    mouseHead.position.set(0, 0.01, 0.035);
+    mouseGroup.add(mouseHead);
+
+    // Ears
+    [-0.01, 0.01].forEach(x => {{
+        const ear = new THREE.Mesh(
+            new THREE.SphereGeometry(0.008, 4, 4),
+            new THREE.MeshLambertMaterial({{ color: 0x997788 }})
+        );
+        ear.position.set(x, 0.025, 0.03);
+        mouseGroup.add(ear);
+    }});
+
+    // Eyes
+    [-0.007, 0.007].forEach(x => {{
+        const eye = new THREE.Mesh(
+            new THREE.SphereGeometry(0.004, 4, 4),
+            new THREE.MeshBasicMaterial({{ color: 0x111111 }})
+        );
+        eye.position.set(x, 0.018, 0.05);
+        mouseGroup.add(eye);
+    }});
+
+    // Tail
+    const tail = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.002, 0.001, 0.08, 4),
+        new THREE.MeshLambertMaterial({{ color: 0x997788 }})
+    );
+    tail.position.set(0, 0, -0.05);
+    tail.rotation.x = 0.5;
+    mouseGroup.add(tail);
+
+    mouseGroup.position.set(0.9, 0.72, 0.3);
+    mouseGroup.rotation.y = -0.8;
+    scene.add(mouseGroup);
+    clickable.push(mouseGroup);
+}}
+
+// ============ DRAWERS ============
+const drawers = [];
+for (let i = 0; i < 4; i++) {{
+    const drawer = new THREE.Group();
+    const dBody = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.3, 0.05), woodMat);
+    drawer.add(dBody);
+
+    const dHandle = new THREE.Mesh(new THREE.SphereGeometry(0.02, 6, 4), metalMat);
+    dHandle.position.z = 0.035;
+    drawer.add(dHandle);
+
+    // Label plate
+    const plate = new THREE.Mesh(
+        new THREE.PlaneGeometry(0.12, 0.04),
+        metalMat
+    );
+    plate.position.set(0, 0.06, 0.03);
+    drawer.add(plate);
+
+    const drawerLabels = ['Tinctures', 'Compounds', 'Specimens', 'Private'];
+    const drawerLore = [
+        'Standard medicines.', 'Experimental mixtures.',
+        'Organic material. Handle with care.',
+        INTENSITY >= 4 ? 'LOCKED. Scratches on the INSIDE.' : 'Locked.'
+    ];
+
+    drawer.position.set(-1.6 + i * 1.05 + 0.5, 0.3, 0.45);
+    drawer.userData = {{ type: 'drawer', title: drawerLabels[i], desc: 'A labelled drawer.', lore: drawerLore[i] }};
+    scene.add(drawer);
+    drawers.push(drawer);
+    clickable.push(drawer);
+}}
+
+// ============ UV BACK WALL MESSAGE ============
+const uvMessage = new THREE.Mesh(
+    new THREE.PlaneGeometry(2.5, 0.4),
+    new THREE.MeshBasicMaterial({{ color: 0x9900ff, transparent: true, opacity: 0.7, side: THREE.DoubleSide }})
+);
+uvMessage.position.set(0, 1.8, -0.38);
+uvElements.add(uvMessage);
+
+// ============ DUST PARTICLES ============
+const dustCount = 120 + INTENSITY * 30;
+const dustGeo = new THREE.BufferGeometry();
+const dustPos = new Float32Array(dustCount * 3);
+const dustVel = [];
+for (let i = 0; i < dustCount; i++) {{
+    dustPos[i * 3] = (Math.random() - 0.5) * 3.5;
+    dustPos[i * 3 + 1] = Math.random() * 3.5;
+    dustPos[i * 3 + 2] = (Math.random() - 0.5) * 1.5;
+    dustVel.push({{ y: 0.0005 + Math.random() * 0.001, x: (Math.random() - 0.5) * 0.0005 }});
+}}
+dustGeo.setAttribute('position', new THREE.BufferAttribute(dustPos, 3));
+const dustParticles = new THREE.Points(dustGeo, new THREE.PointsMaterial({{
+    color: {hx(c["glow"])}, size: 0.02, transparent: true, opacity: 0.4
+}}));
+scene.add(dustParticles);
+
+// ============ CAMERA CONTROLS ============
+let isDragging = false;
+let prevMouse = {{ x: 0, y: 0 }};
+let camAngle = 0, camHeight = 1.5, camDist = 4;
 
 function updateCam() {{
-    camera.position.x = target.x + dist*Math.sin(phi)*Math.sin(theta);
-    camera.position.y = target.y + dist*Math.cos(phi);
-    camera.position.z = target.z + dist*Math.sin(phi)*Math.cos(theta);
-    camera.lookAt(target);
+    camera.position.x = Math.sin(camAngle) * camDist;
+    camera.position.y = camHeight;
+    camera.position.z = Math.cos(camAngle) * camDist;
+    camera.lookAt(0, 1.3, 0);
 }}
 
-renderer.domElement.onmousedown = e => {{ isDown=true; hasMoved=false; px=e.clientX; py=e.clientY; }};
-window.onmouseup = () => {{ isDown=false; }};
-renderer.domElement.onmousemove = e => {{
-    mouse.x = (e.clientX/window.innerWidth)*2-1;
-    mouse.y = -(e.clientY/window.innerHeight)*2+1;
-    if(isDown) {{
-        const dx = e.clientX-px, dy = e.clientY-py;
-        if(Math.abs(dx)>3 || Math.abs(dy)>3) hasMoved=true;
-        if(hasMoved) {{
-            theta += dx*0.005;
-            phi = Math.max(0.5, Math.min(1.5, phi+dy*0.005));
-            px=e.clientX; py=e.clientY;
-            updateCam();
-        }}
-    }}
-}};
-renderer.domElement.onwheel = e => {{
-    e.preventDefault();
-    dist = Math.max(3.5, Math.min(10, dist+e.deltaY*0.005));
+renderer.domElement.addEventListener('mousedown', e => {{ isDragging = true; prevMouse = {{ x: e.clientX, y: e.clientY }}; }});
+renderer.domElement.addEventListener('mousemove', e => {{
+    if (!isDragging) return;
+    camAngle -= (e.clientX - prevMouse.x) * 0.008;
+    camHeight = Math.max(0.5, Math.min(3.5, camHeight + (e.clientY - prevMouse.y) * 0.008));
+    prevMouse = {{ x: e.clientX, y: e.clientY }};
     updateCam();
-}};
+}});
+window.addEventListener('mouseup', () => {{ isDragging = false; }});
+renderer.domElement.addEventListener('wheel', e => {{
+    e.preventDefault();
+    camDist = Math.max(2, Math.min(7, camDist + e.deltaY * 0.01));
+    updateCam();
+}}, {{ passive: false }});
+
+// Touch
+renderer.domElement.addEventListener('touchstart', e => {{ if (e.touches.length === 1) {{ isDragging = true; prevMouse = {{ x: e.touches[0].clientX, y: e.touches[0].clientY }}; }} }});
+renderer.domElement.addEventListener('touchmove', e => {{
+    if (!isDragging || e.touches.length !== 1) return;
+    camAngle -= (e.touches[0].clientX - prevMouse.x) * 0.008;
+    camHeight = Math.max(0.5, Math.min(3.5, camHeight + (e.touches[0].clientY - prevMouse.y) * 0.008));
+    prevMouse = {{ x: e.touches[0].clientX, y: e.touches[0].clientY }};
+    updateCam();
+}});
+renderer.domElement.addEventListener('touchend', () => {{ isDragging = false; }});
 updateCam();
 
-// Sounds
-const soundEl = document.getElementById('sounds');
-let soundIdx = 0;
-function showSound() {{
-    const pool = NIGHTMARE ? [...SOUNDS, ...NIGHTMARE_SOUNDS] : SOUNDS;
-    soundEl.textContent = pool[soundIdx % pool.length];
-    soundEl.style.opacity = 0.7;
-    setTimeout(() => soundEl.style.opacity = 0, 3500);
-    soundIdx++;
-}}
-setInterval(showSound, 8000 - INTENSITY*1000);
-setTimeout(showSound, 3000);
+// ============ CLICK INTERACTION ============
+const tooltip = document.getElementById('tooltip');
 
-// Nightmare text
-const nightmareEl = document.getElementById('nightmare-text');
-const NIGHTMARE_TEXTS = [
-    'IT SEES YOU',
-    'OPEN THE RED ONE',
-    'WE ARE WAITING',
-    'JOIN US',
-    'YOUR BLOOD NEXT',
-    'THEY NEVER LEFT'
-];
-if (NIGHTMARE) {{
-    setInterval(() => {{
-        nightmareEl.textContent = NIGHTMARE_TEXTS[Math.floor(Math.random()*NIGHTMARE_TEXTS.length)];
-        nightmareEl.style.opacity = 0.8;
-        setTimeout(() => nightmareEl.style.opacity = 0, 2000);
-    }}, 15000);
-}}
-
-// UV Mode
-document.getElementById('btn-uv').onclick = () => {{
-    uvMode = !uvMode;
-    document.getElementById('btn-uv').classList.toggle('active', uvMode);
-    document.getElementById('uv-overlay').classList.toggle('active', uvMode);
-    uvLight.intensity = uvMode ? 2 : 0;
-    dir.intensity = uvMode ? 0.3 : 1.0;
-}};
-
-// Drawer panel
-document.getElementById('btn-drawer').onclick = () => {{
-    const panel = document.getElementById('drawer-panel');
-    panel.classList.toggle('show');
-    if (panel.classList.contains('show')) {{
-        const items = document.getElementById('drawer-items');
-        items.innerHTML = '';
-        DRAWER_ITEMS.forEach(item => {{
-            const div = document.createElement('div');
-            div.className = 'drawer-item' + (item.locked ? ' locked' : '');
-            div.textContent = item.name;
-            div.onclick = () => {{
-                if (item.locked && item.id === 'society') {{
-                    document.getElementById('lock-panel').classList.add('show');
-                }} else if (!item.locked) {{
-                    alert(item.name + '\\n\\n' + item.desc);
-                    if (!found.has('drawer_'+item.id)) {{
-                        found.add('drawer_'+item.id);
-                        secrets++;
-                        document.getElementById('snum').textContent = secrets;
-                    }}
-                }}
-            }};
-            items.appendChild(div);
-        }});
-    }}
-}};
-document.getElementById('drawer-close').onclick = () => document.getElementById('drawer-panel').classList.remove('show');
-
-// Lock panel
-const dials = document.querySelectorAll('.dial');
-dials.forEach(d => {{
-    d.onclick = () => {{
-        let v = parseInt(d.textContent);
-        d.textContent = (v + 1) % 10;
-    }};
-}});
-document.getElementById('lock-submit').onclick = () => {{
-    const code = Array.from(dials).map(d => d.textContent).join('');
-    if (code === '847') {{ // 1847 - Society founded
-        document.getElementById('lock-panel').classList.remove('show');
-        DRAWER_ITEMS.forEach(item => item.locked = false);
-        document.getElementById('btn-drawer').click();
-        document.getElementById('btn-drawer').click();
-        if (!found.has('lock_solved')) {{
-            found.add('lock_solved');
-            secrets++;
-            document.getElementById('snum').textContent = secrets;
-        }}
-    }} else {{
-        document.getElementById('lock-hint').textContent = 'Incorrect. The Society was founded in 18__...';
-    }}
-}};
-document.getElementById('lock-close').onclick = () => document.getElementById('lock-panel').classList.remove('show');
-
-// Mix panel
-document.getElementById('btn-mix').onclick = () => document.getElementById('mix-panel').classList.toggle('show');
-document.getElementById('mix-close').onclick = () => document.getElementById('mix-panel').classList.remove('show');
-document.getElementById('mix-clear').onclick = () => {{
-    mixSlots[0] = mixSlots[1] = null;
-    document.querySelectorAll('.mix-slot').forEach(s => {{
-        s.textContent = 'Empty';
-        s.classList.remove('filled');
-    }});
-    document.getElementById('mix-result').innerHTML = 'Add two bottles to combine...';
-}};
-document.getElementById('mix-combine').onclick = () => {{
-    if (!mixSlots[0] || !mixSlots[1]) return;
-    const t1 = mixSlots[0].mixType, t2 = mixSlots[1].mixType;
-    const key1 = t1+'+'+t2, key2 = t2+'+'+t1;
-    const result = MIX_RESULTS[key1] || MIX_RESULTS[key2];
-    if (result) {{
-        document.getElementById('mix-result').innerHTML = 
-            '<span style="color:'+result.color+';font-weight:bold;">'+result.result+'</span><br><br>'+result.effect;
-        if (!found.has('mix_'+key1)) {{
-            found.add('mix_'+key1);
-            secrets++;
-            document.getElementById('snum').textContent = secrets;
-        }}
-    }} else {{
-        document.getElementById('mix-result').innerHTML = 'No reaction. These substances do not combine meaningfully.';
-    }}
-}};
-
-// Zoom panel
-let sel = null, wave = 0, shaking = false;
-const zoomPanel = document.getElementById('zoom-panel');
-const zCanvas = document.getElementById('zoom-canvas');
-const zCtx = zCanvas.getContext('2d');
-
-function showZoom(b) {{
-    sel = b;
-    document.getElementById('zoom-name').textContent = b.name;
-    document.getElementById('zoom-sub').textContent = b.sub;
-    document.getElementById('zoom-desc').textContent = b.desc;
-    document.getElementById('zoom-contents').textContent = b.contents;
-    document.getElementById('zoom-warn').textContent = '⚠ ' + b.warn;
-    
-    const sec = document.getElementById('zoom-secret');
-    sec.classList.remove('show');
-    if (b.hasSecret) {{
-        sec.textContent = '🔍 ' + b.secret;
-        setTimeout(() => {{
-            sec.classList.add('show');
-            if (!found.has(b.id)) {{
-                found.add(b.id);
-                secrets++;
-                document.getElementById('snum').textContent = secrets;
-            }}
-        }}, 1200);
-    }} else sec.textContent = '';
-    
-    const uvEl = document.getElementById('zoom-uv');
-    uvEl.textContent = '☢ UV REVEALS: ' + b.uv;
-    uvEl.classList.toggle('show', uvMode);
-    
-    zoomPanel.classList.add('show');
-}}
-
-document.getElementById('zoom-close').onclick = () => {{ zoomPanel.classList.remove('show'); sel = null; }};
-document.getElementById('z-shake').onclick = () => {{ shaking = true; setTimeout(() => shaking = false, 800); }};
-document.getElementById('z-smell').onclick = () => {{
-    const smells = {{ laudanum:'Bitter opium...', chloroform:'Sickly sweet.', vita:'Iron and copper.', leeches:'Stagnant water.', unmarked:'BITTER ALMONDS!', brain:'Formaldehyde.' }};
-    const hint = document.getElementById('hint');
-    hint.textContent = smells[sel?.id] || 'Chemical odor...';
-    hint.style.opacity = 1;
-    setTimeout(() => hint.style.opacity = 0, 2500);
-}};
-document.getElementById('z-pour').onclick = () => {{
-    if (sel) {{
-        sel.level = Math.max(0.05, sel.level - 0.1);
-        document.getElementById('hint').textContent = '*A drop falls...*';
-        document.getElementById('hint').style.opacity = 1;
-        setTimeout(() => document.getElementById('hint').style.opacity = 0, 2000);
-    }}
-}};
-document.getElementById('z-addmix').onclick = () => {{
-    if (!sel || sel.mixType === 'none') return;
-    const slot = mixSlots[0] === null ? 0 : (mixSlots[1] === null ? 1 : -1);
-    if (slot >= 0) {{
-        mixSlots[slot] = sel;
-        const slotEl = document.querySelector('.mix-slot[data-slot="'+slot+'"]');
-        slotEl.textContent = sel.name;
-        slotEl.classList.add('filled');
-        document.getElementById('hint').textContent = 'Added to mixing chamber.';
-        document.getElementById('hint').style.opacity = 1;
-        setTimeout(() => document.getElementById('hint').style.opacity = 0, 1500);
-    }}
-}};
-
-// ===== 2D BOTTLE RENDERING - UNIQUE SHAPES MATCHING 3D =====
-function draw2d(b) {{
-    const w=zCanvas.width, h=zCanvas.height;
-    zCtx.clearRect(0,0,w,h);
-    zCtx.save();
-    zCtx.translate(w/2, h/2);
-    if(shaking) zCtx.rotate(Math.sin(wave*3)*0.1);
-    
-    const glassCol = '#'+b.color.toString(16).padStart(6,'0');
-    const glassColAlpha = glassCol+'99';
-    const liqCol = '#'+b.liquid.toString(16).padStart(6,'0')+'dd';
-    const metalCol = '#c8a030';
-    
-    // Helper: draw hexagon path
-    function hexPath(cx, cy, r, ht) {{
-        zCtx.beginPath();
-        for(let i=0; i<6; i++) {{
-            const angle = (i/6)*Math.PI*2 - Math.PI/2;
-            const x = cx + r*Math.cos(angle);
-            if(i===0) zCtx.moveTo(x, cy - ht/2);
-            else zCtx.lineTo(x, cy - ht/2);
-        }}
-        for(let i=5; i>=0; i--) {{
-            const angle = (i/6)*Math.PI*2 - Math.PI/2;
-            const x = cx + r*Math.cos(angle);
-            zCtx.lineTo(x, cy + ht/2);
-        }}
-        zCtx.closePath();
-    }}
-    
-    let bW=100, bH=250, neckY=-125, labelY=0, labelW=80, labelH=60;
-    let liquidTop=0, liquidBot=0, liquidW=80;
-    
-    // ===== UNIQUE BOTTLE SHAPES =====
-    
-    if(b.id === 'laudanum') {{
-        // Rectangular amber apothecary with embossed band
-        bW=70; bH=200;
-        zCtx.fillStyle = glassColAlpha;
-        zCtx.strokeStyle = glassCol;
-        zCtx.lineWidth = 3;
-        zCtx.beginPath();
-        zCtx.roundRect(-bW/2, -bH/2, bW, bH, 6);
-        zCtx.fill(); zCtx.stroke();
-        // Embossed band
-        zCtx.fillStyle = metalCol;
-        zCtx.fillRect(-bW/2-2, -20, bW+4, 12);
-        // Neck
-        zCtx.fillStyle = glassColAlpha;
-        zCtx.fillRect(-18, -bH/2-45, 36, 50);
-        zCtx.strokeRect(-18, -bH/2-45, 36, 50);
-        neckY = -bH/2-50;
-        liquidTop = -bH/2+15; liquidBot = bH/2-10; liquidW = bW-12;
-    }}
-    else if(b.id === 'chloroform') {{
-        // Hexagonal blue poison with ridges and skull
-        bW=90; bH=190;
-        zCtx.fillStyle = glassColAlpha;
-        zCtx.strokeStyle = glassCol;
-        zCtx.lineWidth = 3;
-        hexPath(0, 10, 45, bH);
-        zCtx.fill(); zCtx.stroke();
-        // Ridges (poison warning)
-        zCtx.strokeStyle = glassCol;
-        zCtx.lineWidth = 4;
-        for(let i=-2; i<=2; i++) {{
-            zCtx.beginPath();
-            zCtx.moveTo(i*18, -bH/2+20);
-            zCtx.lineTo(i*18, bH/2-10);
-            zCtx.stroke();
-        }}
-        // Skull emboss
-        zCtx.fillStyle = glassCol;
-        zCtx.beginPath();
-        zCtx.arc(0, 30, 18, 0, Math.PI*2);
-        zCtx.fill();
-        zCtx.fillStyle = '#000';
-        zCtx.beginPath();
-        zCtx.arc(-6, 27, 4, 0, Math.PI*2);
-        zCtx.arc(6, 27, 4, 0, Math.PI*2);
-        zCtx.fill();
-        zCtx.beginPath();
-        zCtx.moveTo(-4, 38); zCtx.lineTo(0, 42); zCtx.lineTo(4, 38);
-        zCtx.stroke();
-        // Neck
-        zCtx.fillStyle = glassColAlpha;
-        zCtx.fillRect(-16, -bH/2-40, 32, 45);
-        neckY = -bH/2-45;
-        liquidTop = -bH/2+30; liquidBot = bH/2-5; liquidW = 70;
-        labelY = -50; labelH = 40; labelW = 70;
-    }}
-    else if(b.id === 'soothing') {{
-        // Round cheerful bottle
-        bW=120; bH=160;
-        zCtx.fillStyle = glassColAlpha;
-        zCtx.strokeStyle = glassCol;
-        zCtx.lineWidth = 3;
-        zCtx.beginPath();
-        zCtx.ellipse(0, 20, 60, 80, 0, 0, Math.PI*2);
-        zCtx.fill(); zCtx.stroke();
-        // Neck
-        zCtx.beginPath();
-        zCtx.moveTo(-20, -55); zCtx.lineTo(-14, -100);
-        zCtx.lineTo(14, -100); zCtx.lineTo(20, -55);
-        zCtx.closePath();
-        zCtx.fill(); zCtx.stroke();
-        neckY = -105;
-        liquidTop = -40; liquidBot = 95; liquidW = 100;
-        labelY = 10;
-    }}
-    else if(b.id === 'mercury') {{
-        // Cylindrical with silver bands
-        bW=75; bH=220;
-        zCtx.fillStyle = glassColAlpha;
-        zCtx.strokeStyle = glassCol;
-        zCtx.lineWidth = 3;
-        zCtx.beginPath();
-        zCtx.roundRect(-bW/2, -bH/2, bW, bH, 8);
-        zCtx.fill(); zCtx.stroke();
-        // Silver bands
-        zCtx.fillStyle = metalCol;
-        for(let i=0; i<3; i++) {{
-            zCtx.fillRect(-bW/2-3, -60+i*50, bW+6, 8);
-        }}
-        // Neck
-        zCtx.fillStyle = glassColAlpha;
-        zCtx.fillRect(-16, -bH/2-35, 32, 40);
-        neckY = -bH/2-40;
-        liquidTop = -bH/2+15; liquidBot = bH/2-10; liquidW = bW-14;
-    }}
-    else if(b.id === 'arsenic') {{
-        // Elegant oval perfume-style
-        bW=80; bH=180;
-        zCtx.fillStyle = glassColAlpha;
-        zCtx.strokeStyle = glassCol;
-        zCtx.lineWidth = 3;
-        zCtx.beginPath();
-        zCtx.ellipse(0, 15, 40, 75, 0, 0, Math.PI*2);
-        zCtx.fill(); zCtx.stroke();
-        // Long elegant neck
-        zCtx.beginPath();
-        zCtx.moveTo(-12, -55); zCtx.lineTo(-8, -110);
-        zCtx.lineTo(8, -110); zCtx.lineTo(12, -55);
-        zCtx.closePath();
-        zCtx.fill(); zCtx.stroke();
-        // Decorative glass stopper
-        zCtx.beginPath();
-        zCtx.arc(0, -125, 18, 0, Math.PI*2);
-        zCtx.fill(); zCtx.stroke();
-        neckY = -145;
-        liquidTop = -45; liquidBot = 85; liquidW = 65;
-        labelY = 5; labelH = 50;
-    }}
-    else if(b.id === 'ether') {{
-        // Ribbed brown bottle
-        bW=85; bH=200;
-        zCtx.fillStyle = glassColAlpha;
-        zCtx.strokeStyle = glassCol;
-        zCtx.lineWidth = 3;
-        zCtx.beginPath();
-        zCtx.roundRect(-bW/2, -bH/2, bW, bH, 8);
-        zCtx.fill(); zCtx.stroke();
-        // Vertical ribs
-        zCtx.strokeStyle = glassCol;
-        zCtx.lineWidth = 5;
-        for(let i=-3; i<=3; i++) {{
-            zCtx.beginPath();
-            zCtx.moveTo(i*11, -bH/2+10);
-            zCtx.lineTo(i*11, bH/2-10);
-            zCtx.stroke();
-        }}
-        // Neck
-        zCtx.fillStyle = glassColAlpha;
-        zCtx.lineWidth = 3;
-        zCtx.fillRect(-18, -bH/2-40, 36, 45);
-        zCtx.strokeRect(-18, -bH/2-40, 36, 45);
-        neckY = -bH/2-45;
-        liquidTop = -bH/2+20; liquidBot = bH/2-10; liquidW = bW-18;
-    }}
-    else if(b.id === 'cocaine') {{
-        // Tall thin dropper bottle
-        bW=50; bH=240;
-        zCtx.fillStyle = glassColAlpha;
-        zCtx.strokeStyle = glassCol;
-        zCtx.lineWidth = 3;
-        zCtx.beginPath();
-        zCtx.roundRect(-bW/2, -bH/2, bW, bH, 6);
-        zCtx.fill(); zCtx.stroke();
-        // Thin neck
-        zCtx.fillRect(-10, -bH/2-50, 20, 55);
-        // Rubber dropper top
-        zCtx.fillStyle = '#333';
-        zCtx.fillRect(-14, -bH/2-80, 28, 35);
-        // Rubber bulb
-        zCtx.beginPath();
-        zCtx.arc(0, -bH/2-95, 18, 0, Math.PI*2);
-        zCtx.fill();
-        neckY = -bH/2-115;
-        liquidTop = -bH/2+15; liquidBot = bH/2-10; liquidW = bW-14;
-        labelY = 10; labelW = 45;
-    }}
-    else if(b.id === 'strychnine') {{
-        // Hexagonal red poison with wax seal
-        bW=85; bH=200;
-        zCtx.fillStyle = glassColAlpha;
-        zCtx.strokeStyle = glassCol;
-        zCtx.lineWidth = 3;
-        hexPath(0, 10, 42, bH);
-        zCtx.fill(); zCtx.stroke();
-        // Neck
-        zCtx.fillStyle = glassColAlpha;
-        zCtx.fillRect(-16, -bH/2-35, 32, 40);
-        // Red wax seal
-        zCtx.fillStyle = '#880000';
-        zCtx.beginPath();
-        zCtx.arc(0, -bH/2-45, 22, 0, Math.PI*2);
-        zCtx.fill();
-        zCtx.fillStyle = '#660000';
-        zCtx.font = '12px Georgia';
-        zCtx.textAlign = 'center';
-        zCtx.fillText('☠', 0, -bH/2-40);
-        neckY = -bH/2-50;
-        liquidTop = -bH/2+25; liquidBot = bH/2; liquidW = 68;
-        labelY = -20;
-    }}
-    else if(b.id === 'carbolic') {{
-        // Hospital-style with horizontal ridges
-        bW=75; bH=220;
-        zCtx.fillStyle = glassColAlpha;
-        zCtx.strokeStyle = glassCol;
-        zCtx.lineWidth = 3;
-        zCtx.beginPath();
-        zCtx.roundRect(-bW/2, -bH/2, bW, bH, 8);
-        zCtx.fill(); zCtx.stroke();
-        // Horizontal ridges
-        zCtx.strokeStyle = glassCol;
-        zCtx.lineWidth = 5;
-        for(let i=0; i<5; i++) {{
-            zCtx.beginPath();
-            zCtx.moveTo(-bW/2+5, -70+i*35);
-            zCtx.lineTo(bW/2-5, -70+i*35);
-            zCtx.stroke();
-        }}
-        // Neck
-        zCtx.fillStyle = glassColAlpha;
-        zCtx.lineWidth = 3;
-        zCtx.fillRect(-16, -bH/2-35, 32, 40);
-        neckY = -bH/2-40;
-        liquidTop = -bH/2+20; liquidBot = bH/2-10; liquidW = bW-16;
-    }}
-    else if(b.id === 'embalming') {{
-        // Large wide jug with handle
-        bW=120; bH=230;
-        zCtx.fillStyle = glassColAlpha;
-        zCtx.strokeStyle = glassCol;
-        zCtx.lineWidth = 3;
-        zCtx.beginPath();
-        zCtx.roundRect(-bW/2, -bH/2, bW, bH, 12);
-        zCtx.fill(); zCtx.stroke();
-        // Wide neck
-        zCtx.fillRect(-25, -bH/2-45, 50, 50);
-        zCtx.strokeRect(-25, -bH/2-45, 50, 50);
-        // Handle
-        zCtx.strokeStyle = glassCol;
-        zCtx.lineWidth = 10;
-        zCtx.beginPath();
-        zCtx.arc(bW/2+15, 0, 35, -Math.PI/2, Math.PI/2);
-        zCtx.stroke();
-        neckY = -bH/2-50;
-        liquidTop = -bH/2+20; liquidBot = bH/2-10; liquidW = bW-16;
-        labelW = 100; labelH = 70;
-    }}
-    else if(b.id === 'vita') {{
-        // Ornate teardrop with rose emblem
-        bW=110; bH=200;
-        zCtx.fillStyle = glassColAlpha;
-        zCtx.strokeStyle = glassCol;
-        zCtx.lineWidth = 3;
-        // Teardrop shape
-        zCtx.beginPath();
-        zCtx.moveTo(0, -80);
-        zCtx.bezierCurveTo(-55, -40, -55, 80, 0, 100);
-        zCtx.bezierCurveTo(55, 80, 55, -40, 0, -80);
-        zCtx.fill(); zCtx.stroke();
-        // Long neck
-        zCtx.fillRect(-12, -130, 24, 55);
-        zCtx.strokeRect(-12, -130, 24, 55);
-        // Rose emblem
-        zCtx.fillStyle = '#880000';
-        zCtx.beginPath();
-        zCtx.arc(0, 20, 15, 0, Math.PI*2);
-        zCtx.fill();
-        for(let i=0; i<5; i++) {{
-            const a = (i/5)*Math.PI*2;
-            zCtx.beginPath();
-            zCtx.ellipse(Math.cos(a)*12, 20+Math.sin(a)*12, 8, 5, a, 0, Math.PI*2);
-            zCtx.fill();
-        }}
-        // Ornate cone stopper
-        zCtx.fillStyle = glassCol;
-        zCtx.beginPath();
-        zCtx.moveTo(-15, -130); zCtx.lineTo(0, -160); zCtx.lineTo(15, -130);
-        zCtx.closePath();
-        zCtx.fill(); zCtx.stroke();
-        neckY = -165;
-        liquidTop = -60; liquidBot = 95; liquidW = 80;
-        labelY = -30; labelH = 35; labelW = 60;
-    }}
-    else if(b.id === 'unmarked') {{
-        // Plain hexagonal, no label
-        bW=80; bH=190;
-        zCtx.fillStyle = glassColAlpha;
-        zCtx.strokeStyle = glassCol;
-        zCtx.lineWidth = 3;
-        hexPath(0, 10, 40, bH);
-        zCtx.fill(); zCtx.stroke();
-        // Neck
-        zCtx.fillStyle = glassColAlpha;
-        zCtx.fillRect(-14, -bH/2-35, 28, 40);
-        neckY = -bH/2-40;
-        liquidTop = -bH/2+25; liquidBot = bH/2; liquidW = 65;
-        labelW = 0; // No label!
-    }}
-    else if(b.id === 'unwilling') {{
-        // Black rectangular sinister
-        bW=65; bH=220;
-        zCtx.fillStyle = glassColAlpha;
-        zCtx.strokeStyle = glassCol;
-        zCtx.lineWidth = 3;
-        zCtx.beginPath();
-        zCtx.roundRect(-bW/2, -bH/2, bW, bH, 4);
-        zCtx.fill(); zCtx.stroke();
-        // Neck
-        zCtx.fillRect(-12, -bH/2-40, 24, 45);
-        // Black wax seal
-        zCtx.fillStyle = '#111';
-        zCtx.beginPath();
-        zCtx.arc(0, -bH/2-50, 20, 0, Math.PI*2);
-        zCtx.fill();
-        neckY = -bH/2-55;
-        liquidTop = -bH/2+15; liquidBot = bH/2-10; liquidW = bW-12;
-    }}
-    else if(b.id === 'mercy') {{
-        // Tiny vial with skull stopper
-        bW=40; bH=140;
-        zCtx.fillStyle = glassColAlpha;
-        zCtx.strokeStyle = glassCol;
-        zCtx.lineWidth = 3;
-        zCtx.beginPath();
-        zCtx.roundRect(-bW/2, -bH/2, bW, bH, 6);
-        zCtx.fill(); zCtx.stroke();
-        // Thin neck
-        zCtx.fillRect(-8, -bH/2-30, 16, 35);
-        // Skull stopper
-        zCtx.fillStyle = '#eec';
-        zCtx.beginPath();
-        zCtx.arc(0, -bH/2-50, 18, 0, Math.PI*2);
-        zCtx.fill();
-        zCtx.strokeStyle = '#886';
-        zCtx.stroke();
-        // Skull face
-        zCtx.fillStyle = '#333';
-        zCtx.beginPath();
-        zCtx.arc(-6, -bH/2-53, 4, 0, Math.PI*2);
-        zCtx.arc(6, -bH/2-53, 4, 0, Math.PI*2);
-        zCtx.fill();
-        zCtx.beginPath();
-        zCtx.moveTo(-4, -bH/2-42); zCtx.lineTo(0, -bH/2-38); zCtx.lineTo(4, -bH/2-42);
-        zCtx.stroke();
-        neckY = -bH/2-70;
-        liquidTop = -bH/2+12; liquidBot = bH/2-8; liquidW = bW-12;
-        labelY = 5; labelW = 38; labelH = 45;
-    }}
-    else if(b.id === 'blood_sc') {{
-        // Test tube with rounded bottom
-        bW=35; bH=210;
-        zCtx.fillStyle = glassColAlpha;
-        zCtx.strokeStyle = glassCol;
-        zCtx.lineWidth = 3;
-        // Tube body
-        zCtx.fillRect(-bW/2, -bH/2, bW, bH-20);
-        zCtx.strokeRect(-bW/2, -bH/2, bW, bH-20);
-        // Rounded bottom
-        zCtx.beginPath();
-        zCtx.arc(0, bH/2-20, bW/2, 0, Math.PI);
-        zCtx.fill(); zCtx.stroke();
-        // Lip at top
-        zCtx.fillStyle = glassCol;
-        zCtx.beginPath();
-        zCtx.ellipse(0, -bH/2, bW/2+4, 8, 0, 0, Math.PI*2);
-        zCtx.fill();
-        neckY = -bH/2-10;
-        liquidTop = -bH/2+20; liquidBot = bH/2-5; liquidW = bW-8;
-        labelY = -20; labelW = 32; labelH = 55;
-    }}
-    else if(b.id === 'teeth') {{
-        // Wide mouth specimen jar with screw lid
-        bW=120; bH=170;
-        zCtx.fillStyle = glassColAlpha;
-        zCtx.strokeStyle = glassCol;
-        zCtx.lineWidth = 3;
-        zCtx.beginPath();
-        zCtx.roundRect(-bW/2, -bH/2, bW, bH, 10);
-        zCtx.fill(); zCtx.stroke();
-        // Screw-top metal lid
-        zCtx.fillStyle = metalCol;
-        zCtx.fillRect(-bW/2-5, -bH/2-35, bW+10, 40);
-        // Lid ridges
-        zCtx.strokeStyle = '#8a7020';
-        zCtx.lineWidth = 2;
-        for(let i=0; i<8; i++) {{
-            zCtx.beginPath();
-            zCtx.moveTo(-bW/2+i*16, -bH/2-35);
-            zCtx.lineTo(-bW/2+i*16, -bH/2);
-            zCtx.stroke();
-        }}
-        neckY = -bH/2-40;
-        liquidTop = -bH/2+15; liquidBot = bH/2-10; liquidW = bW-16;
-        labelY = 20; labelW = 90;
-    }}
-    else if(b.id === 'leeches') {{
-        // Rounded jar with domed top
-        bW=110; bH=180;
-        zCtx.fillStyle = glassColAlpha;
-        zCtx.strokeStyle = glassCol;
-        zCtx.lineWidth = 3;
-        zCtx.beginPath();
-        zCtx.roundRect(-bW/2, -bH/2+20, bW, bH-20, 12);
-        zCtx.fill(); zCtx.stroke();
-        // Dome top
-        zCtx.beginPath();
-        zCtx.arc(0, -bH/2+20, bW/2, Math.PI, 0);
-        zCtx.fill(); zCtx.stroke();
-        // Ventilated metal lid
-        zCtx.fillStyle = metalCol;
-        zCtx.beginPath();
-        zCtx.arc(0, -bH/2-15, 35, 0, Math.PI*2);
-        zCtx.fill();
-        // Vent holes
-        zCtx.fillStyle = '#333';
-        for(let i=0; i<5; i++) {{
-            zCtx.beginPath();
-            zCtx.arc(-20+i*10, -bH/2-15, 3, 0, Math.PI*2);
-            zCtx.fill();
-        }}
-        neckY = -bH/2-25;
-        liquidTop = -bH/2+40; liquidBot = bH/2-10; liquidW = bW-18;
-        labelY = 30;
-    }}
-    else if(b.id === 'essence') {{
-        // Ceramic pot (not glass!)
-        bW=100; bH=160;
-        const potCol = '#d4c4a8';
-        zCtx.fillStyle = potCol;
-        zCtx.strokeStyle = '#a89878';
-        zCtx.lineWidth = 3;
-        zCtx.beginPath();
-        zCtx.roundRect(-bW/2, -bH/2, bW, bH, 15);
-        zCtx.fill(); zCtx.stroke();
-        // Decorative rim
-        zCtx.lineWidth = 8;
-        zCtx.beginPath();
-        zCtx.arc(0, -bH/2+5, bW/2+5, Math.PI, 0);
-        zCtx.stroke();
-        // Ceramic lid
-        zCtx.fillStyle = potCol;
-        zCtx.lineWidth = 3;
-        zCtx.fillRect(-bW/2+5, -bH/2-25, bW-10, 30);
-        zCtx.strokeRect(-bW/2+5, -bH/2-25, bW-10, 30);
-        // Lid knob
-        zCtx.beginPath();
-        zCtx.arc(0, -bH/2-35, 12, 0, Math.PI*2);
-        zCtx.fill(); zCtx.stroke();
-        neckY = -bH/2-50;
-        liquidTop = 0; liquidBot = 0; liquidW = 0; // No visible liquid
-        labelY = 20; labelW = 70;
-    }}
-    else if(b.id === 'tapeworm') {{
-        // Tall specimen tube with base stand
-        bW=55; bH=250;
-        zCtx.fillStyle = glassColAlpha;
-        zCtx.strokeStyle = glassCol;
-        zCtx.lineWidth = 3;
-        zCtx.beginPath();
-        zCtx.roundRect(-bW/2, -bH/2, bW, bH-20, 6);
-        zCtx.fill(); zCtx.stroke();
-        // Metal base stand
-        zCtx.fillStyle = metalCol;
-        zCtx.fillRect(-bW/2-10, bH/2-25, bW+20, 30);
-        // Neck
-        zCtx.fillStyle = glassColAlpha;
-        zCtx.fillRect(-14, -bH/2-30, 28, 35);
-        neckY = -bH/2-35;
-        liquidTop = -bH/2+15; liquidBot = bH/2-30; liquidW = bW-14;
-        labelY = -20; labelW = 50;
-    }}
-    else if(b.id === 'brain') {{
-        // Ornate Victorian jar with dome lid
-        bW=110; bH=170;
-        zCtx.fillStyle = glassColAlpha;
-        zCtx.strokeStyle = glassCol;
-        zCtx.lineWidth = 3;
-        zCtx.beginPath();
-        zCtx.roundRect(-bW/2, -bH/2, bW, bH, 12);
-        zCtx.fill(); zCtx.stroke();
-        // Ornate metal band
-        zCtx.fillStyle = metalCol;
-        zCtx.fillRect(-bW/2-3, -10, bW+6, 15);
-        // Decorative dots on band
-        zCtx.fillStyle = '#8a7020';
-        for(let i=0; i<7; i++) {{
-            zCtx.beginPath();
-            zCtx.arc(-bW/2+10+i*15, -3, 3, 0, Math.PI*2);
-            zCtx.fill();
-        }}
-        // Metal dome lid
-        zCtx.fillStyle = metalCol;
-        zCtx.beginPath();
-        zCtx.arc(0, -bH/2, bW/2-5, Math.PI, 0);
-        zCtx.fill();
-        zCtx.strokeStyle = '#8a7020';
-        zCtx.stroke();
-        // Lid knob
-        zCtx.fillRect(-8, -bH/2-45, 16, 30);
-        neckY = -bH/2-50;
-        liquidTop = -bH/2+30; liquidBot = bH/2-10; liquidW = bW-18;
-        labelY = 35; labelW = 85;
-    }}
-    else {{
-        // Default bottle (fallback)
-        bW=85; bH=220;
-        zCtx.fillStyle = glassColAlpha;
-        zCtx.strokeStyle = glassCol;
-        zCtx.lineWidth = 3;
-        zCtx.beginPath();
-        zCtx.roundRect(-bW/2, -bH/2, bW, bH, 10);
-        zCtx.fill(); zCtx.stroke();
-        zCtx.fillRect(-16, -bH/2-40, 32, 45);
-        neckY = -bH/2-45;
-        liquidTop = -bH/2+15; liquidBot = bH/2-10; liquidW = bW-14;
-    }}
-    
-    // ===== LIQUID =====
-    if(liquidW > 0 && b.id !== 'essence') {{
-        const lh = (liquidBot - liquidTop) * b.level;
-        const ly = liquidBot - lh;
-        zCtx.fillStyle = liqCol;
-        zCtx.beginPath();
-        // Wavy top
-        zCtx.moveTo(-liquidW/2, ly + Math.sin(wave)*4);
-        for(let x = -liquidW/2; x <= liquidW/2; x += 8) {{
-            zCtx.lineTo(x, ly + Math.sin(wave + x*0.1)*4);
-        }}
-        zCtx.lineTo(liquidW/2, liquidBot);
-        zCtx.lineTo(-liquidW/2, liquidBot);
-        zCtx.closePath();
-        zCtx.fill();
-        
-        // ===== ANIMATIONS =====
-        const animLh = lh, animLy = ly;
-        
-        if(b.anim==='bubble' || b.anim==='swirl') {{
-            for(let i=0; i<5; i++) {{
-                const bx = Math.sin(wave*0.5+i*2)*(liquidW/3);
-                const by = animLy+20+((wave*20+i*30)%(animLh-20));
-                if(by > animLy && by < liquidBot-5) {{
-                    zCtx.beginPath();
-                    zCtx.arc(bx, by, 3+Math.sin(wave+i)*2, 0, Math.PI*2);
-                    zCtx.fillStyle = 'rgba(255,255,255,0.3)';
-                    zCtx.fill();
-                }}
-            }}
-        }}
-        if(b.anim==='pulse') {{
-            zCtx.fillStyle = 'rgba(255,100,100,'+(0.1+Math.sin(wave)*0.1)+')';
-            zCtx.fillRect(-liquidW/2+5, animLy+5, liquidW-10, animLh-10);
-        }}
-        if(b.anim==='shimmer') {{
-            for(let i=0; i<8; i++) {{
-                const sx = Math.sin(wave+i)*liquidW/3;
-                const sy = animLy+10+i*18;
-                if(sy < liquidBot-5 && sy > animLy) {{
-                    zCtx.beginPath();
-                    zCtx.arc(sx, sy, 2, 0, Math.PI*2);
-                    zCtx.fillStyle = 'rgba(200,200,220,0.5)';
-                    zCtx.fill();
-                }}
-            }}
-        }}
-        if(b.anim==='sparkle') {{
-            for(let i=0; i<6; i++) {{
-                if(Math.sin(wave*2+i)>0.7) {{
-                    const sx = (Math.random()-0.5)*liquidW*0.6;
-                    const sy = animLy+20+Math.random()*animLh*0.7;
-                    zCtx.beginPath();
-                    zCtx.arc(sx, sy, 2, 0, Math.PI*2);
-                    zCtx.fillStyle = 'rgba(255,255,255,0.8)';
-                    zCtx.fill();
-                }}
-            }}
-        }}
-        if(b.special==='leeches') {{
-            zCtx.fillStyle = '#2a3a2a';
-            for(let i=0; i<5; i++) {{
-                const lx = Math.sin(wave*0.4+i*2)*30;
-                const leechY = animLy+25+i*22+Math.cos(wave*0.3+i)*10;
-                if(leechY < liquidBot-10 && leechY > animLy+10) {{
-                    zCtx.beginPath();
-                    zCtx.ellipse(lx, leechY, 14, 7, Math.sin(wave+i)*0.4, 0, Math.PI*2);
-                    zCtx.fill();
-                    zCtx.fillStyle = '#ff0000';
-                    zCtx.beginPath();
-                    zCtx.arc(lx+10, leechY-2, 2, 0, Math.PI*2);
-                    zCtx.fill();
-                    zCtx.fillStyle = '#2a3a2a';
-                }}
-            }}
-        }}
-        if(b.special==='swirl') {{
-            zCtx.strokeStyle = 'rgba(200,50,50,0.5)';
-            zCtx.lineWidth = 3;
-            for(let i=0; i<4; i++) {{
-                const sy = animLy+30+i*20;
-                if(sy < liquidBot-15 && sy > animLy+10) {{
-                    zCtx.beginPath();
-                    zCtx.arc(Math.sin(wave+i)*15, sy, 10+i*4, wave+i, wave+i+Math.PI);
-                    zCtx.stroke();
-                }}
-            }}
-        }}
-        if(b.anim==='float') {{
-            zCtx.fillStyle = 'rgba(200,200,180,0.7)';
-            for(let i=0; i<7; i++) {{
-                const fx = (Math.sin(wave*0.3+i*1.5)-0.5)*liquidW*0.5;
-                const fy = animLy+12+((wave*8+i*18)%(animLh-15));
-                if(fy > animLy && fy < liquidBot-5) {{
-                    zCtx.beginPath();
-                    zCtx.ellipse(fx, fy, 5, 3, wave+i, 0, Math.PI*2);
-                    zCtx.fill();
-                }}
-            }}
-        }}
-        
-        // NIGHTMARE: Face in liquid
-        if(NIGHTMARE && Math.random()>0.97) {{
-            const faceY = animLy + animLh/2;
-            zCtx.fillStyle = 'rgba(0,0,0,0.4)';
-            zCtx.beginPath();
-            zCtx.arc(0, faceY, 20, 0, Math.PI*2);
-            zCtx.fill();
-            zCtx.fillStyle = 'rgba(255,255,255,0.6)';
-            zCtx.beginPath();
-            zCtx.arc(-7, faceY-5, 4, 0, Math.PI*2);
-            zCtx.arc(7, faceY-5, 4, 0, Math.PI*2);
-            zCtx.fill();
-            zCtx.strokeStyle = 'rgba(255,255,255,0.4)';
-            zCtx.beginPath();
-            zCtx.arc(0, faceY+8, 8, 0.2, Math.PI-0.2);
-            zCtx.stroke();
-        }}
-    }}
-    
-    // ===== CORK (only for bottles that use corks) =====
-    if(['laudanum','ether','carbolic','mercury','blood_sc','tapeworm','soothing'].includes(b.id)) {{
-        zCtx.fillStyle = '#8b7355';
-        zCtx.fillRect(-22, neckY-5, 44, 30);
-    }}
-    
-    // ===== LABEL =====
-    if(labelW > 0 && b.id !== 'unmarked') {{
-        zCtx.fillStyle = uvMode ? '#220033' : '#ffffee';
-        zCtx.fillRect(-labelW/2, labelY-labelH/2, labelW, labelH);
-        zCtx.strokeStyle = '#8b7355'; 
-        zCtx.lineWidth = 1;
-        zCtx.strokeRect(-labelW/2, labelY-labelH/2, labelW, labelH);
-        
-        zCtx.fillStyle = uvMode ? '{uv_color}' : '#333';
-        zCtx.font = (labelW < 50 ? '11' : '14') + 'px Georgia';
-        zCtx.textAlign = 'center';
-        zCtx.fillText(b.name, 0, labelY - 2);
-        zCtx.font = (labelW < 50 ? '9' : '11') + 'px Georgia';
-        zCtx.fillText(b.sub, 0, labelY + 14);
-        
-        // Special border for important bottles
-        if(['vita','strychnine','unwilling','mercy'].includes(b.id)) {{
-            zCtx.strokeStyle = (b.id === 'vita') ? '#880000' : 
-                              (b.id === 'strychnine') ? '#aa0000' :
-                              (b.id === 'unwilling') ? '#333' : '#555';
-            zCtx.lineWidth = 2;
-            zCtx.strokeRect(-labelW/2+3, labelY-labelH/2+3, labelW-6, labelH-6);
-        }}
-    }}
-    
-    // UV mode extra text
-    if(uvMode && b.uv) {{
-        zCtx.fillStyle = '{uv_color}';
-        zCtx.font = 'italic 11px Georgia';
-        zCtx.textAlign = 'center';
-        const uvY = (b.id === 'unmarked' || b.id === 'essence') ? 0 : labelY + labelH/2 + 18;
-        zCtx.fillText(b.uv, 0, uvY);
-    }}
-    
-    zCtx.restore();
-    
-    // NIGHTMARE: Reaching hand
-    if(NIGHTMARE && Math.random()>0.99) {{
-        zCtx.fillStyle = 'rgba(100,80,70,0.7)';
-        zCtx.beginPath();
-        zCtx.moveTo(w-30, h);
-        zCtx.lineTo(w-50, h-60);
-        zCtx.lineTo(w-35, h-80);
-        zCtx.lineTo(w-25, h-65);
-        zCtx.lineTo(w-15, h-85);
-        zCtx.lineTo(w-10, h-60);
-        zCtx.lineTo(w, h);
-        zCtx.fill();
-    }}
-}}
-
-// Hidden compartment (click back 3 times)
-let backClicks = 0;
-function checkHidden() {{
-    raycaster.setFromCamera(mouse, camera);
-    const hits = raycaster.intersectObject(back);
-    if(hits.length > 0) {{
-        backClicks++;
-        if(backClicks >= 3 && !hiddenFound) {{
-            hiddenFound = true;
-            document.getElementById('hidden-flash').style.opacity = 1;
-            setTimeout(() => document.getElementById('hidden-flash').style.opacity = 0, 2500);
-            if(!found.has('hidden_compartment')) {{
-                found.add('hidden_compartment');
-                secrets++;
-                document.getElementById('snum').textContent = secrets;
-            }}
-            // Add secret bottle
-            const secretBottle = {{
-                id:'elixir', name:'THE ELIXIR', sub:'Unknown Origin', color:0x000000, liquid:0x110011,
-                level:0.95, row:2, slot:2, desc:'Found behind false panel. Ancient. Terrible.',
-                contents:'Older than Fitzroy. Older than the Society.', warn:'DO NOT DRINK',
-                secret:'This is what they worship.', uv:'ANNO DOMINI 1666', hasSecret:true,
-                mixType:'blood', anim:'swirl', special:'swirl'
-            }};
-            const g = new THREE.Group();
-            const glass = new THREE.Mesh(
-                new THREE.CylinderGeometry(0.1, 0.11, 0.38, 12),
-                new THREE.MeshLambertMaterial({{ color:0x111111, transparent:true, opacity:0.8 }})
-            );
-            g.add(glass);
-            const liq = new THREE.Mesh(
-                new THREE.CylinderGeometry(0.08, 0.09, 0.32, 12),
-                new THREE.MeshLambertMaterial({{ color:0x220011, transparent:true, opacity:0.9 }})
-            );
-            liq.position.y = -0.02;
-            g.add(liq);
-            g.position.set(0, 1.6, 0.3);
-            g.userData = secretBottle;
-            scene.add(g);
-            bottles.push(g);
-        }}
-    }}
-}}
-
-// Click handler
-renderer.domElement.onclick = e => {{
-    if(hasMoved) return;
-    const cm = new THREE.Vector2((e.clientX/window.innerWidth)*2-1, -(e.clientY/window.innerHeight)*2+1);
+renderer.domElement.addEventListener('click', e => {{
+    const cm = new THREE.Vector2((e.clientX / window.innerWidth) * 2 - 1, -(e.clientY / window.innerHeight) * 2 + 1);
     raycaster.setFromCamera(cm, camera);
-    
-    // Check bottles FIRST
-    const hits = raycaster.intersectObjects(bottles, true);
-    if(hits.length) {{
-        let o = hits[0].object;
-        // Check if hit object has bottleRef (hitbox)
-        if(o.userData.bottleRef) {{
-            showZoom(o.userData.bottleRef);
+    const intersects = raycaster.intersectObjects(scene.children, true);
+    for (const hit of intersects) {{
+        let obj = hit.object;
+        while (obj && !obj.userData.type) obj = obj.parent;
+        if (obj && obj.userData.type) {{
+            tooltip.querySelector('.title').textContent = obj.userData.title || '';
+            tooltip.querySelector('.desc').textContent = obj.userData.desc || '';
+            tooltip.querySelector('.lore').textContent = obj.userData.lore || '';
+            tooltip.querySelector('.lore').style.display = obj.userData.lore ? 'block' : 'none';
+            tooltip.style.left = Math.min(e.clientX + 15, window.innerWidth - 280) + 'px';
+            tooltip.style.top = Math.min(e.clientY + 15, window.innerHeight - 130) + 'px';
+            tooltip.classList.add('visible');
             return;
         }}
-        // Otherwise traverse up to find parent with id
-        while(o) {{
-            if(o.userData && o.userData.id) {{
-                showZoom(o.userData);
-                return;
-            }}
-            o = o.parent;
-        }}
     }}
-    
-    // Only check back panel if no bottles hit
-    const backHit = raycaster.intersectObject(back);
-    if(backHit.length > 0) checkHidden();
+    tooltip.classList.remove('visible');
+}});
+
+// ============ UV TOGGLE ============
+window.toggleUV = function() {{
+    uvMode = !uvMode;
+    document.getElementById('uv-btn').classList.toggle('active', uvMode);
+    document.getElementById('uv-overlay').style.background = uvMode ? 'rgba(30,0,80,0.25)' : 'rgba(30,0,80,0)';
+    uvLight.intensity = uvMode ? 2.5 : 0;
+    uvElements.visible = uvMode;
+    candleLight.intensity = uvMode ? 0.2 : 1.2;
 }};
 
-// Animation
+// ============ ANIMATION ============
 const clock = new THREE.Clock();
+
 function animate() {{
     requestAnimationFrame(animate);
     const t = clock.getElapsedTime();
-    
-    // Hover detection
-    raycaster.setFromCamera(mouse, camera);
-    const hits = raycaster.intersectObjects(bottles, true);
-    bottles.forEach(b => {{
-        // Reset emissive on glass meshes inside glassGroup (children[1])
-        if(b.children[1] && b.children[1].children) {{
-            b.children[1].children.forEach(child => {{
-                if(child.material && child.material.emissive) {{
-                    child.material.emissive.setHex(0x000000);
-                }}
-            }});
-        }}
+
+    // Candle flicker
+    candleLight.intensity = (uvMode ? 0.2 : 1.2) + Math.sin(t * 18) * 0.15 + Math.sin(t * 37) * 0.08;
+    flame.scale.y = 1.4 + Math.sin(t * 12) * 0.2;
+    flame.position.x = Math.sin(t * 7) * 0.003;
+    flameInner.scale.y = 1 + Math.sin(t * 15) * 0.15;
+
+    // Dust particles
+    const dPos = dustParticles.geometry.attributes.position.array;
+    for (let i = 0; i < dustCount; i++) {{
+        dPos[i * 3] += dustVel[i].x + Math.sin(t + i) * 0.0002;
+        dPos[i * 3 + 1] += dustVel[i].y;
+        if (dPos[i * 3 + 1] > 3.5) dPos[i * 3 + 1] = 0;
+    }}
+    dustParticles.geometry.attributes.position.needsUpdate = true;
+
+    // Herbs sway
+    herbBundles.forEach((h, i) => {{
+        h.rotation.z = Math.PI + Math.sin(t * 0.8 + i) * 0.05;
     }});
-    
-    const hint = document.getElementById('hint');
-    if(hits.length && !zoomPanel.classList.contains('show')) {{
-        let hitData = null;
-        let o = hits[0].object;
-        
-        // Check for bottleRef (hitbox)
-        if(o.userData.bottleRef) {{
-            hitData = o.userData.bottleRef;
+
+    // Mouse animation
+    if (mouseGroup) {{
+        const mCycle = Math.sin(t * 2);
+        if (mCycle > 0.8) {{
+            // Peek out
+            mouseGroup.position.z = 0.3 + Math.sin(t * 4) * 0.02;
         }} else {{
-            // Traverse up to find parent with id
-            while(o) {{
-                if(o.userData && o.userData.id) {{
-                    hitData = o.userData;
-                    break;
-                }}
-                o = o.parent;
-            }}
+            // Hide
+            mouseGroup.position.z = 0.25;
         }}
-        
-        if(hitData) {{
-            // Find the bottle group and highlight glass
-            const bottleGroup = bottles.find(b => b.userData.id === hitData.id);
-            if(bottleGroup && bottleGroup.children[1] && bottleGroup.children[1].children) {{
-                bottleGroup.children[1].children.forEach(child => {{
-                    if(child.material && child.material.emissive) {{
-                        child.material.emissive.setHex({light});
-                        child.material.emissiveIntensity = uvMode ? 0.4 : 0.2;
-                    }}
-                }});
-            }}
-            hint.textContent = hitData.name;
-            hint.style.opacity = 1;
-        }}
-    }} else if(!zoomPanel.classList.contains('show')) {{
-        hint.style.opacity = 0;
+        mouseGroup.rotation.y = -0.8 + Math.sin(t * 0.5) * 0.3;
     }}
-    
-    // Bottle animations (3D)
-    bottles.forEach(b => {{
-        const glassGroup = b.children[1];
-        const liquid = b.children[2];
-        
-        if(b.userData.special === 'swirl' && liquid) {{
-            liquid.rotation.y = t * 0.5;
-        }}
-        if(b.userData.special === 'leeches' && liquid) {{
-            liquid.scale.y = 1 + Math.sin(t*2)*0.05;
-        }}
-        if(b.userData.anim === 'pulse' && glassGroup && glassGroup.children) {{
-            glassGroup.children.forEach(child => {{
-                if(child.material) child.material.opacity = 0.5 + Math.sin(t*3)*0.15;
-            }});
-        }}
-        // UV glow
-        if(uvMode && b.userData.uv && glassGroup && glassGroup.children) {{
-            glassGroup.children.forEach(child => {{
-                if(child.material && child.material.emissive) {{
-                    child.material.emissive.setHex(0x440066);
-                    child.material.emissiveIntensity = 0.3 + Math.sin(t*4)*0.1;
-                }}
-            }});
+
+    // Scales slight sway
+    if (scales) {{
+        scales.children.forEach(child => {{
+            if (child.position.y > 0.25 && child.position.y < 0.35) {{
+                // This affects the beam
+            }}
+        }});
+    }}
+
+    // Bottle liquid shimmer
+    bottles.forEach((b, i) => {{
+        if (b.children[3]) {{
+            b.children[3].material.opacity = 0.3 + Math.sin(t * 1.5 + i) * 0.08;
         }}
     }});
-    
-    // 2D animation
-    wave += shaking ? 0.4 : 0.03;
-    if(sel) draw2d(sel);
-    
-    // UV flicker
-    if(uvMode) uvLight.intensity = 2 + Math.sin(t*10)*0.3;
-    
-    // NIGHTMARE: Random bottle shake
-    if(NIGHTMARE && Math.random() > 0.998) {{
-        const randBottle = bottles[Math.floor(Math.random()*bottles.length)];
-        randBottle.rotation.z = 0.1;
-        setTimeout(() => randBottle.rotation.z = 0, 200);
+
+    // UV glow pulse
+    if (uvMode) {{
+        uvElements.children.forEach((el, i) => {{
+            el.material.opacity = 0.5 + Math.sin(t * 3 + i) * 0.3;
+        }});
     }}
-    
+
+    // Skull eye glow (gothic high intensity)
+    if (MODE === 'gothic' && INTENSITY >= 4) {{
+        skull.children.forEach(child => {{
+            if (child.material && child.material.color && child.material.color.r > 0.5) {{
+                child.material.opacity = 0.4 + Math.sin(t * 2) * 0.3;
+            }}
+        }});
+    }}
+
+    // Auto orbit
+    if (!isDragging) {{
+        camAngle += 0.001;
+        updateCam();
+    }}
+
     renderer.render(scene, camera);
 }}
 
-window.onresize = () => {{
-    camera.aspect = window.innerWidth/window.innerHeight;
+window.addEventListener('resize', () => {{
+    const w = container.clientWidth || window.innerWidth;
+    const h = container.clientHeight || window.innerHeight;
+    camera.aspect = w / h;
     camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
-}};
+    renderer.setSize(w, h);
+}});
 
-console.log('Starting animation loop...');
 animate();
 }})();
 </script>
