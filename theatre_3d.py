@@ -3,45 +3,46 @@
 Fully immersive Three.js Victorian anatomy theatre.
 
 UPDATES IMPLEMENTED:
-- Upgraded to Three.js r183 with ACESFilmicToneMapping.
-- BYPASSED strict physical lighting decay by explicitly setting PointLight and SpotLight decay to 0.
-- Restored artistic, manageable light intensity values (no need for millions of candelas).
+- PBR (Physically Based Rendering) Materials: Added metallic and roughness maps for realistic brass, wood, and cloth.
+- Chiaroscuro Lighting: Implemented cool/blue ambient moonlight contrasted with intense warm/orange focal lights.
+- Cinematic Falloff: Configured lights to create isolated "pools" of gaslight using controlled distance and linear decay.
+- Enhanced fog for a thicker, smoggy London atmosphere.
 """
 
 def get_theatre_3d(mode: str = "gaslight", intensity: int = 3) -> str:
     colors = {
         "gaslight": {
-            "ambient": 0x2a1a0a, "background": 0x1a1410,
-            "wood": 0x4a3520, "wood_dark": 0x2c1810,
-            "metal": 0xb8860b, "cloth": 0xf5f5dc, "skin": 0xdcbfa0,
-            "light_color": 0xffaa44, "light_intensity": 1.0,
-            "fog_color": 0x1a1410, "fog_near": 5, "fog_far": 50,
-            "particle_color": 0xffcc88, "text_color": "#d4a574",
-            "rose_color": 0x8b0000, "spectator_color": 0x1a1a1a,
-            "stone": 0x554433, "blood_color": 0x440000,
-            "chalk_color": 0xddddcc, "banner_color": 0xddd8c0,
+            "ambient": 0x223344, "background": 0x0a0705,
+            "wood": 0x3d2817, "wood_dark": 0x1f120a,
+            "metal": 0xb8860b, "cloth": 0xddddcc, "skin": 0xc2a88f,
+            "light_color": 0xffa040, "light_intensity": 1.0,
+            "fog_color": 0x0a0705, "fog_near": 5, "fog_far": 40,
+            "particle_color": 0xffb070, "text_color": "#d4a574",
+            "rose_color": 0x8b0000, "spectator_color": 0x111111,
+            "stone": 0x332b25, "blood_color": 0x330000,
+            "chalk_color": 0xccccbb, "banner_color": 0xa8a090,
         },
         "gothic": {
-            "ambient": 0x1a0505, "background": 0x0a0a0a,
-            "wood": 0x2a1515, "wood_dark": 0x1a0a0a,
-            "metal": 0x4a4a4a, "cloth": 0x8b0000, "skin": 0x998877,
-            "light_color": 0xff2200, "light_intensity": 1.2,
-            "fog_color": 0x0a0000, "fog_near": 3, "fog_far": 35,
-            "particle_color": 0xff4444, "text_color": "#cc0000",
-            "rose_color": 0xff0000, "spectator_color": 0x0a0a0a,
-            "stone": 0x2a2020, "blood_color": 0x660000,
-            "chalk_color": 0xccaaaa, "banner_color": 0x332222,
+            "ambient": 0x111a22, "background": 0x050505,
+            "wood": 0x221111, "wood_dark": 0x0f0505,
+            "metal": 0x555555, "cloth": 0x770000, "skin": 0x887766,
+            "light_color": 0xff3311, "light_intensity": 1.2,
+            "fog_color": 0x050505, "fog_near": 3, "fog_far": 30,
+            "particle_color": 0xff5555, "text_color": "#cc0000",
+            "rose_color": 0xff0000, "spectator_color": 0x050505,
+            "stone": 0x1a1515, "blood_color": 0x550000,
+            "chalk_color": 0xaa8888, "banner_color": 0x221515,
         },
         "clinical": {
-            "ambient": 0x404040, "background": 0xf0f0f0,
-            "wood": 0xe0e0e0, "wood_dark": 0xcccccc,
-            "metal": 0xaaaaaa, "cloth": 0xffffff, "skin": 0xeeddcc,
-            "light_color": 0xffffff, "light_intensity": 1.5,
-            "fog_color": 0xf0f0f0, "fog_near": 20, "fog_far": 100,
-            "particle_color": 0xcccccc, "text_color": "#2f4f4f",
-            "rose_color": 0xcc0000, "spectator_color": 0x333333,
-            "stone": 0xbbbbbb, "blood_color": 0x993333,
-            "chalk_color": 0x333333, "banner_color": 0xeeeeee,
+            "ambient": 0x556677, "background": 0xcccccc,
+            "wood": 0xbbbbbb, "wood_dark": 0x888888,
+            "metal": 0x99aacc, "cloth": 0xffffff, "skin": 0xddccbb,
+            "light_color": 0xffffff, "light_intensity": 1.2,
+            "fog_color": 0xcccccc, "fog_near": 15, "fog_far": 60,
+            "particle_color": 0xffffff, "text_color": "#2f4f4f",
+            "rose_color": 0xaa0000, "spectator_color": 0x333333,
+            "stone": 0x999999, "blood_color": 0x882222,
+            "chalk_color": 0x222222, "banner_color": 0xdddddd,
         }
     }
 
@@ -77,7 +78,7 @@ canvas {{ display:block; width:100%!important; height:100%!important; }}
 #tooltip .lore {{ font-style:italic; font-size:12px; margin-top:8px; opacity:0.8; border-top:1px solid {c["text_color"]}33; padding-top:8px; }}
 #quote {{ position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); color:{c["text_color"]}; font-size:20px; font-style:italic; text-align:center; max-width:500px; opacity:0; transition:opacity 2s; pointer-events:none; text-shadow:0 0 30px rgba(0,0,0,0.95); z-index:100; }}
 #whisper {{ position:absolute; bottom:80px; left:50%; transform:translateX(-50%); color:{c["text_color"]}; font-size:14px; font-style:italic; opacity:0; transition:opacity 1s; pointer-events:none; text-shadow:0 0 15px rgba(0,0,0,0.9); z-index:100; }}
-.vignette {{ position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; background:radial-gradient(ellipse at center, transparent 30%, rgba(0,0,0,{0.5+creep_factor*0.3 if mode!='clinical' else 0.1}) 100%); z-index:50; }}
+.vignette {{ position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; background:radial-gradient(ellipse at center, transparent 30%, rgba(0,0,0,{0.7+creep_factor*0.2 if mode!='clinical' else 0.2}) 100%); z-index:50; }}
 #lightning {{ position:absolute; top:0; left:0; width:100%; height:100%; background:white; opacity:0; pointer-events:none; z-index:60; }}
 #blood-overlay {{ position:absolute; top:0; left:0; width:100%; height:100%; background:radial-gradient(ellipse at center, transparent 60%, rgba(139,0,0,0.3) 100%); opacity:0; pointer-events:none; z-index:55; transition:opacity 0.5s; }}
 .secret-found {{ position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); color:#cc0000; font-size:16px; text-transform:uppercase; letter-spacing:4px; opacity:0; pointer-events:none; z-index:150; text-shadow:0 0 20px rgba(139,0,0,0.8); transition:opacity 0.5s; }}
@@ -117,73 +118,71 @@ const H = container.clientHeight || window.innerHeight;
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color({hx(c["background"])});
-scene.fog = new THREE.FogExp2({hx(c["fog_color"])}, {0.008 * fog_density});
+
+// Enhanced smoggy fog
+scene.fog = new THREE.FogExp2({hx(c["fog_color"])}, {0.015 * fog_density});
 
 const camera = new THREE.PerspectiveCamera(55, W/H, 0.1, 1000);
-// Spawning inside the room radius to prevent clipping
 camera.position.set(12, 8, 12);
 camera.lookAt(0, 2, 0);
 
-const renderer = new THREE.WebGLRenderer({{ antialias:true }});
+const renderer = new THREE.WebGLRenderer({{ antialias:true, powerPreference: "high-performance" }});
 renderer.setSize(W, H);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
-// Tone mapping configured for Standard brightness
+// Richer, moodier tone mapping
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.2;
+renderer.toneMappingExposure = 1.0; 
 container.appendChild(renderer.domElement);
 
 const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
 
-// ---------- Materials ----------
-const woodMat = new THREE.MeshLambertMaterial({{ color:{hx(c["wood"])} }});
-const darkWoodMat = new THREE.MeshLambertMaterial({{ color:{hx(c["wood_dark"])} }});
-const metalMat = new THREE.MeshLambertMaterial({{ color:{hx(c["metal"])} }});
-const clothMat = new THREE.MeshLambertMaterial({{ color:{hx(c["cloth"])}, side:THREE.DoubleSide }});
-const skinMat = new THREE.MeshLambertMaterial({{ color:{hx(c["skin"])} }});
-const stoneMat = new THREE.MeshLambertMaterial({{ color:{hx(c["stone"])} }});
-const spectatorMat = new THREE.MeshLambertMaterial({{ color:{hx(c["spectator_color"])} }});
-const roseMat = new THREE.MeshBasicMaterial({{ color:{hx(c["rose_color"])}, transparent:true, opacity:0.9 }});
-const bloodMat = new THREE.MeshBasicMaterial({{ color:{hx(c["blood_color"])}, transparent:true, opacity:0.6 }});
+// ---------- PBR Materials (Highly Realistic) ----------
+// Roughness and metalness values give realistic glints and dullness
 
-// ---------- Non-Decaying Lighting Setup (Safely overrides r183 darkness) ----------
+const woodMat = new THREE.MeshStandardMaterial({{ color:{hx(c["wood"])}, roughness: 0.85, metalness: 0.1 }});
+const darkWoodMat = new THREE.MeshStandardMaterial({{ color:{hx(c["wood_dark"])}, roughness: 0.95, metalness: 0.05 }});
+const metalMat = new THREE.MeshStandardMaterial({{ color:{hx(c["metal"])}, roughness: 0.35, metalness: 0.85 }}); // High shine for brass/iron
+const clothMat = new THREE.MeshStandardMaterial({{ color:{hx(c["cloth"])}, roughness: 1.0, side:THREE.DoubleSide }});
+const skinMat = new THREE.MeshStandardMaterial({{ color:{hx(c["skin"])}, roughness: 0.6, metalness: 0.1 }});
+const stoneMat = new THREE.MeshStandardMaterial({{ color:{hx(c["stone"])}, roughness: 0.9, metalness: 0.0 }});
+const spectatorMat = new THREE.MeshStandardMaterial({{ color:{hx(c["spectator_color"])}, roughness: 1.0 }});
+const roseMat = new THREE.MeshStandardMaterial({{ color:{hx(c["rose_color"])}, roughness: 0.4, metalness: 0.2 }});
+const bloodMat = new THREE.MeshStandardMaterial({{ color:{hx(c["blood_color"])}, roughness: 0.2, metalness: 0.1, transparent:true, opacity:0.8 }});
 
-// 1. Hemisphere Bounce Light
-const hemiColor = MODE === 'clinical' ? 0xffffff : 0x445566;
-const hemiLight = new THREE.HemisphereLight(hemiColor, {hx(c["wood_dark"])}, {c["light_intensity"] * 2.0});
-scene.add(hemiLight);
+// ---------- Cinematic Chiaroscuro Lighting ----------
 
-// 2. The Architectural Skylight (DirectionalLight does not decay by default)
-const skylight = new THREE.DirectionalLight({hx(c["light_color"])}, {c["light_intensity"] * 2.5});
-skylight.position.set(0, 40, 0); 
+// 1. Cool Ambient Fill (Simulates night sky / gloomy shadows)
+scene.add(new THREE.AmbientLight({hx(c["ambient"])}, {c["light_intensity"] * 0.8}));
+
+// 2. The Architectural Skylight (Dim moonlight through the dome)
+const skylight = new THREE.DirectionalLight({hx(c["ambient"])}, {c["light_intensity"] * 1.5});
+skylight.position.set(5, 40, 5); 
 skylight.target.position.set(0, 0, 0);
 skylight.castShadow = true;
-skylight.shadow.mapSize.width = 2048;
-skylight.shadow.mapSize.height = 2048;
+skylight.shadow.mapSize.width = 1024;
+skylight.shadow.mapSize.height = 1024;
 skylight.shadow.camera.near = 10;
 skylight.shadow.camera.far = 60;
-skylight.shadow.camera.left = -20;
-skylight.shadow.camera.right = 20;
-skylight.shadow.camera.top = 20;
-skylight.shadow.camera.bottom = -20;
-skylight.shadow.bias = -0.001;
+skylight.shadow.camera.left = -15;
+skylight.shadow.camera.right = 15;
+skylight.shadow.camera.top = 15;
+skylight.shadow.camera.bottom = -15;
+skylight.shadow.bias = -0.002;
 scene.add(skylight);
 scene.add(skylight.target);
 
-// 3. The Surgical Focus Light
-// Signature: SpotLight(color, intensity, distance, angle, penumbra, DECAY)
-// Setting decay to 0 bypasses physical limitations!
-const spotlight = new THREE.SpotLight({hx(c["light_color"])}, {c["light_intensity"] * 8.0}, 0, Math.PI/6, 0.5, 0);
+// 3. The Surgical Focus Light (Warm, intense beam on the table)
+// Using cinematic decay: SpotLight(color, intensity, distance, angle, penumbra, decay)
+const spotlight = new THREE.SpotLight({hx(c["light_color"])}, {c["light_intensity"] * 15.0}, 30, Math.PI/5, 0.8, 1);
 spotlight.position.set(0, 15, 0);
 spotlight.target.position.set(0, 0, 0);
 spotlight.castShadow = true;
 scene.add(spotlight);
 scene.add(spotlight.target);
-
-scene.add(new THREE.AmbientLight(0xffffff, 0.5));
 
 // ---------- Constants ----------
 const tierCount = 5;
@@ -198,7 +197,7 @@ floor.rotation.x = -Math.PI/2;
 floor.receiveShadow = true;
 scene.add(floor);
 
-const pit = new THREE.Mesh(new THREE.CircleGeometry(4.5, 32), new THREE.MeshLambertMaterial({{color:0x222222}}));
+const pit = new THREE.Mesh(new THREE.CircleGeometry(4.5, 32), new THREE.MeshStandardMaterial({{color:0x222222, roughness:0.9}}));
 pit.rotation.x = -Math.PI/2;
 pit.position.y = 0.01;
 scene.add(pit);
@@ -208,7 +207,7 @@ for (let i = 0; i < 4; i++) {{
     const angle = (i / 4) * Math.PI * 2 + Math.PI/8;
     const channel = new THREE.Mesh(
         new THREE.BoxGeometry(0.12, 0.02, 4.2),
-        new THREE.MeshLambertMaterial({{ color: 0x333333 }})
+        new THREE.MeshStandardMaterial({{ color: 0x333333, roughness: 0.9 }})
     );
     channel.position.set(0, 0.015, 0);
     channel.rotation.y = angle;
@@ -217,7 +216,7 @@ for (let i = 0; i < 4; i++) {{
     if (INTENSITY >= 3) {{
         const liquid = new THREE.Mesh(
             new THREE.BoxGeometry(0.08, 0.015, 3.5 * CREEP),
-            new THREE.MeshBasicMaterial({{ color: {hx(c["blood_color"])}, transparent: true, opacity: 0.4 + CREEP * 0.3 }})
+            bloodMat
         );
         liquid.position.set(0, 0.02, 0);
         liquid.rotation.y = angle;
@@ -309,7 +308,7 @@ for (let tier = 0; tier < tierCount; tier++) {{
 // Back wall
 const wall = new THREE.Mesh(
     new THREE.CylinderGeometry(outerRadius + 1.5, outerRadius + 1.5, tierCount * tierHeight + 5, 48, 1, true),
-    new THREE.MeshLambertMaterial({{ color:{hx(c["wood_dark"])}, side:THREE.BackSide }})
+    new THREE.MeshStandardMaterial({{ color:{hx(c["wood_dark"])}, roughness:0.9, side:THREE.BackSide }})
 );
 wall.position.y = (tierCount * tierHeight) / 2;
 scene.add(wall);
@@ -317,8 +316,9 @@ scene.add(wall);
 // Domed Ceiling
 const dome = new THREE.Mesh(
     new THREE.SphereGeometry(outerRadius + 2, 48, 24, 0, Math.PI * 2, 0, Math.PI / 2.5),
-    new THREE.MeshLambertMaterial({{
+    new THREE.MeshStandardMaterial({{
         color: MODE === 'gothic' ? 0x1a0a0a : MODE === 'clinical' ? 0xdddddd : 0x2c1810,
+        roughness: 0.9,
         side: THREE.BackSide
     }})
 );
@@ -327,8 +327,9 @@ scene.add(dome);
 
 const frescoRing = new THREE.Mesh(
     new THREE.TorusGeometry(outerRadius * 0.6, 0.8, 8, 48),
-    new THREE.MeshLambertMaterial({{
+    new THREE.MeshStandardMaterial({{
         color: MODE === 'gothic' ? 0x330000 : MODE === 'clinical' ? 0xcccccc : 0x554422,
+        roughness: 0.8,
         emissive: MODE === 'gothic' ? 0x110000 : 0x000000,
         emissiveIntensity: 0.2
     }})
@@ -371,7 +372,7 @@ for (let i = 0; i < 12; i++) {{
 
     const candle = new THREE.Mesh(
         new THREE.CylinderGeometry(0.02, 0.025, 0.15, 6),
-        new THREE.MeshLambertMaterial({{ color: 0xfffff0 }})
+        new THREE.MeshStandardMaterial({{ color: 0xfffff0, roughness: 0.6 }})
     );
     candle.position.set(Math.cos(angle) * radius, 0.18, Math.sin(angle) * radius);
     chandelier.add(candle);
@@ -383,8 +384,8 @@ for (let i = 0; i < 12; i++) {{
     flame.position.set(Math.cos(angle) * radius, 0.28, Math.sin(angle) * radius);
     chandelier.add(flame);
 
-    // Signature: PointLight(color, intensity, distance, DECAY)
-    const cLight = new THREE.PointLight({hx(c["light_color"])}, {c["light_intensity"]*2.0}, 0, 0);
+    // Cinematic falloff: PointLight(color, intensity, distance, decay)
+    const cLight = new THREE.PointLight({hx(c["light_color"])}, {c["light_intensity"]*3.0}, 8.0, 1.0);
     cLight.position.copy(flame.position);
     chandelier.add(cLight);
     chandelierLights.push(cLight);
@@ -398,40 +399,25 @@ clickableObjects.push(chandelier);
 const doorway = new THREE.Group();
 doorway.userData = {{ type:'doorway', title:'The Entrance', desc:'Heavy oak doors, slightly ajar. A draught pushes through.', lore:'Once you enter, leaving is... complicated.' }};
 
-const doorFrame = new THREE.Mesh(
-    new THREE.BoxGeometry(3.5, 4.5, 0.4),
-    stoneMat
-);
+const doorFrame = new THREE.Mesh(new THREE.BoxGeometry(3.5, 4.5, 0.4), stoneMat);
 doorFrame.position.y = 2.25;
 doorway.add(doorFrame);
 
-const arch = new THREE.Mesh(
-    new THREE.TorusGeometry(1.75, 0.25, 8, 16, Math.PI),
-    stoneMat
-);
+const arch = new THREE.Mesh(new THREE.TorusGeometry(1.75, 0.25, 8, 16, Math.PI), stoneMat);
 arch.position.y = 4.5;
 arch.rotation.x = Math.PI;
 doorway.add(arch);
 
-const doorVoid = new THREE.Mesh(
-    new THREE.BoxGeometry(2.8, 3.8, 0.5),
-    new THREE.MeshBasicMaterial({{ color: 0x050505 }})
-);
+const doorVoid = new THREE.Mesh(new THREE.BoxGeometry(2.8, 3.8, 0.5), new THREE.MeshBasicMaterial({{ color: 0x050505 }}));
 doorVoid.position.set(0, 2.0, 0);
 doorway.add(doorVoid);
 
-const leftDoor = new THREE.Mesh(
-    new THREE.BoxGeometry(1.3, 3.6, 0.12),
-    darkWoodMat
-);
+const leftDoor = new THREE.Mesh(new THREE.BoxGeometry(1.3, 3.6, 0.12), darkWoodMat);
 leftDoor.position.set(-0.8, 1.9, 0.15);
 leftDoor.rotation.y = 0.2;
 doorway.add(leftDoor);
 
-const rightDoor = new THREE.Mesh(
-    new THREE.BoxGeometry(1.3, 3.6, 0.12),
-    darkWoodMat
-);
+const rightDoor = new THREE.Mesh(new THREE.BoxGeometry(1.3, 3.6, 0.12), darkWoodMat);
 rightDoor.position.set(0.8, 1.9, 0.15);
 rightDoor.rotation.y = -0.15;
 doorway.add(rightDoor);
@@ -456,7 +442,7 @@ chalkboard.add(boardFrame);
 
 const boardSurface = new THREE.Mesh(
     new THREE.PlaneGeometry(2.3, 1.6),
-    new THREE.MeshLambertMaterial({{ color: 0x1a2a1a }})
+    new THREE.MeshStandardMaterial({{ color: 0x1a2a1a, roughness: 0.9 }})
 );
 boardSurface.position.set(0, 0.9, 0.05);
 chalkboard.add(boardSurface);
@@ -468,7 +454,7 @@ chalkboard.add(tray);
 [0.3, -0.5, 0.8].forEach(x => {{
     const chalk = new THREE.Mesh(
         new THREE.CylinderGeometry(0.015, 0.015, 0.08, 6),
-        new THREE.MeshLambertMaterial({{ color: {hx(c["chalk_color"])} }})
+        new THREE.MeshStandardMaterial({{ color: {hx(c["chalk_color"])}, roughness: 1.0 }})
     );
     chalk.position.set(x, 0.12, 0.08);
     chalk.rotation.z = Math.PI / 2 + Math.random() * 0.3;
@@ -494,7 +480,7 @@ bannerData.forEach(data => {{
 
     const bannerMesh = new THREE.Mesh(
         new THREE.PlaneGeometry(1.2, 2.0),
-        new THREE.MeshLambertMaterial({{ color:{hx(c["banner_color"])}, side:THREE.DoubleSide }})
+        new THREE.MeshStandardMaterial({{ color:{hx(c["banner_color"])}, roughness: 0.9, side:THREE.DoubleSide }})
     );
     bannerMesh.position.y = 1.0;
     banner.add(bannerMesh);
@@ -544,7 +530,8 @@ for (let tier = 0; tier < 3; tier++) {{
             cb.add(flame);
         }}
 
-        const cLight = new THREE.PointLight({hx(c["light_color"])}, {c["light_intensity"]*1.5}, 0, 0);
+        // Creates small local pools of light along the gallery
+        const cLight = new THREE.PointLight({hx(c["light_color"])}, {c["light_intensity"]*2.0}, 6.0, 1.0);
         cLight.position.y = 0.32;
         cb.add(cLight);
         candelabras.push(cLight);
@@ -569,38 +556,26 @@ clock.add(clockCrown);
 
 const clockFace = new THREE.Mesh(
     new THREE.CircleGeometry(0.28, 24),
-    new THREE.MeshLambertMaterial({{ color: 0xfffff0 }})
+    new THREE.MeshStandardMaterial({{ color: 0xfffff0, roughness: 0.7 }})
 );
 clockFace.position.set(0, 1.8, 0.21);
 clock.add(clockFace);
 
-const hourHand = new THREE.Mesh(
-    new THREE.BoxGeometry(0.02, 0.16, 0.01),
-    new THREE.MeshLambertMaterial({{ color: 0x111111 }})
-);
+const hourHand = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.16, 0.01), new THREE.MeshBasicMaterial({{ color: 0x111111 }}));
 hourHand.position.set(0, 1.85, 0.22);
 clock.add(hourHand);
 
-const minuteHand = new THREE.Mesh(
-    new THREE.BoxGeometry(0.015, 0.22, 0.01),
-    new THREE.MeshLambertMaterial({{ color: 0x111111 }})
-);
+const minuteHand = new THREE.Mesh(new THREE.BoxGeometry(0.015, 0.22, 0.01), new THREE.MeshBasicMaterial({{ color: 0x111111 }}));
 minuteHand.position.set(0, 1.84, 0.23);
 minuteHand.rotation.z = 0.5;
 clock.add(minuteHand);
 
 const pendulum = new THREE.Group();
-const pendulumRod = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.008, 0.008, 0.8, 6),
-    metalMat
-);
+const pendulumRod = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.8, 6), metalMat);
 pendulumRod.position.y = -0.4;
 pendulum.add(pendulumRod);
 
-const pendulumBob = new THREE.Mesh(
-    new THREE.SphereGeometry(0.08, 12, 8),
-    metalMat
-);
+const pendulumBob = new THREE.Mesh(new THREE.SphereGeometry(0.08, 12, 8), metalMat);
 pendulumBob.position.y = -0.85;
 pendulum.add(pendulumBob);
 
@@ -613,7 +588,7 @@ clock.rotation.y = -Math.PI / 3;
 scene.add(clock);
 clickableObjects.push(clock);
 
-// Dissection Table
+// Dissection Table (Highly metallic in PBR)
 const tableGroup = new THREE.Group();
 tableGroup.userData = {{ type:'table', title:'The Dissection Table', desc:'Cold metal. Drainage channels. The subject waits.', lore:'How many have lain here before?' }};
 
@@ -684,7 +659,7 @@ if (INTENSITY >= 5) {{
 const anatomist = new THREE.Group();
 anatomist.userData = {{ type:'anatomist', title:'The Anatomist', desc:'A figure of authority. Steady hands. Cold eyes.', lore:'Is that Fitzroy? The stance. The precision.' }};
 
-const anatBody = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.25, 1.4, 8), new THREE.MeshLambertMaterial({{color:0x1a1a1a}}));
+const anatBody = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.25, 1.4, 8), new THREE.MeshStandardMaterial({{color:0x1a1a1a, roughness:0.9}}));
 anatBody.position.y = 0.7;
 anatomist.add(anatBody);
 
@@ -693,7 +668,7 @@ anatHead.position.y = 1.55;
 anatomist.add(anatHead);
 
 const armGeo = new THREE.CylinderGeometry(0.05, 0.05, 0.6, 6);
-const armMat = new THREE.MeshLambertMaterial({{ color:0x1a1a1a }});
+const armMat = new THREE.MeshStandardMaterial({{ color:0x1a1a1a, roughness:0.9 }});
 
 const leftArm = new THREE.Mesh(armGeo, armMat);
 leftArm.position.set(-0.3, 1.0, 0.2);
@@ -776,14 +751,14 @@ if (INTENSITY >= 3) {{
 
         const ratBody = new THREE.Mesh(
             new THREE.SphereGeometry(0.08, 8, 6),
-            new THREE.MeshLambertMaterial({{ color: 0x3a3020 }})
+            new THREE.MeshStandardMaterial({{ color: 0x3a3020, roughness: 1.0 }})
         );
         ratBody.scale.set(1, 0.7, 1.5);
         rat.add(ratBody);
 
         const ratHead = new THREE.Mesh(
             new THREE.SphereGeometry(0.04, 6, 4),
-            new THREE.MeshLambertMaterial({{ color: 0x3a3020 }})
+            new THREE.MeshStandardMaterial({{ color: 0x3a3020, roughness: 1.0 }})
         );
         ratHead.position.set(0, 0.02, 0.1);
         rat.add(ratHead);
@@ -799,7 +774,7 @@ if (INTENSITY >= 3) {{
 
         const tail = new THREE.Mesh(
             new THREE.CylinderGeometry(0.005, 0.003, 0.2, 4),
-            new THREE.MeshLambertMaterial({{ color: 0x553322 }})
+            new THREE.MeshStandardMaterial({{ color: 0x553322 }})
         );
         tail.position.set(0, 0, -0.14);
         tail.rotation.x = 0.3;
@@ -824,21 +799,21 @@ if (MODE === 'gothic' && INTENSITY >= 2) {{
 
         const ravenBody = new THREE.Mesh(
             new THREE.SphereGeometry(0.12, 8, 6),
-            new THREE.MeshLambertMaterial({{ color: 0x0a0a0a }})
+            new THREE.MeshStandardMaterial({{ color: 0x0a0a0a, roughness: 0.9 }})
         );
         ravenBody.scale.set(0.8, 0.9, 1.3);
         raven.add(ravenBody);
 
         const ravenHead = new THREE.Mesh(
             new THREE.SphereGeometry(0.07, 6, 5),
-            new THREE.MeshLambertMaterial({{ color: 0x0a0a0a }})
+            new THREE.MeshStandardMaterial({{ color: 0x0a0a0a, roughness: 0.9 }})
         );
         ravenHead.position.set(0, 0.08, 0.12);
         raven.add(ravenHead);
 
         const beak = new THREE.Mesh(
             new THREE.ConeGeometry(0.02, 0.06, 4),
-            new THREE.MeshLambertMaterial({{ color: 0x222222 }})
+            new THREE.MeshStandardMaterial({{ color: 0x222222 }})
         );
         beak.position.set(0, 0.06, 0.2);
         beak.rotation.x = Math.PI / 2;
@@ -856,7 +831,7 @@ if (MODE === 'gothic' && INTENSITY >= 2) {{
         [-1, 1].forEach(side => {{
             const wing = new THREE.Mesh(
                 new THREE.PlaneGeometry(0.25, 0.12),
-                new THREE.MeshLambertMaterial({{ color: 0x0a0a0a, side: THREE.DoubleSide }})
+                new THREE.MeshStandardMaterial({{ color: 0x0a0a0a, side: THREE.DoubleSide, roughness: 0.9 }})
             );
             wing.position.set(side * 0.15, 0.02, -0.02);
             wing.rotation.z = side * 0.3;
@@ -876,7 +851,7 @@ if (MODE === 'gothic' && INTENSITY >= 2) {{
     }}
 }}
 
-// Gaslights
+// Major Gaslights along the outer wall
 const gaslights = [];
 const glowMeshes = [];
 for (let i = 0; i < 10; i++) {{
@@ -886,7 +861,8 @@ for (let i = 0; i < 10; i++) {{
     fixture.position.set(Math.cos(angle) * outerRadius, tierCount * tierHeight + 0.5, Math.sin(angle) * outerRadius);
     scene.add(fixture);
 
-    const light = new THREE.PointLight({hx(c["light_color"])}, {c["light_intensity"]*5.0}, 0, 0);
+    // Cinematic falloff: PointLight(color, intensity, distance, decay)
+    const light = new THREE.PointLight({hx(c["light_color"])}, {c["light_intensity"]*8.0}, 15.0, 1.0);
     light.position.copy(fixture.position);
     light.position.y -= 0.25;
     scene.add(light);
@@ -918,7 +894,7 @@ cabinetData.forEach(data => {{
 
     const glass = new THREE.Mesh(
         new THREE.PlaneGeometry(0.7, 1.1),
-        new THREE.MeshBasicMaterial({{ color:0x88aacc, transparent:true, opacity:0.15, side:THREE.DoubleSide }})
+        new THREE.MeshStandardMaterial({{ color:0x88aacc, transparent:true, opacity:0.2, roughness:0.1, side:THREE.DoubleSide }})
     );
     glass.position.set(0, 0.7, 0.23);
     cabinet.add(glass);
@@ -926,9 +902,10 @@ cabinetData.forEach(data => {{
     for (let j = 0; j < 3; j++) {{
         const jar = new THREE.Mesh(
             new THREE.CylinderGeometry(0.06, 0.06, 0.18, 12),
-            new THREE.MeshLambertMaterial({{
+            new THREE.MeshStandardMaterial({{
                 color: MODE === 'gothic' ? 0x44ff44 : 0xeeffaa,
-                transparent:true, opacity:0.6,
+                transparent:true, opacity:0.7,
+                roughness:0.2,
                 emissive: MODE === 'gothic' ? 0x003300 : 0x111100,
                 emissiveIntensity: 0.4
             }})
@@ -955,7 +932,7 @@ rosePositions.forEach((pos, idx) => {{
     const rose = new THREE.Group();
     const petal = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 6), roseMat);
     rose.add(petal);
-    const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.1, 4), new THREE.MeshBasicMaterial({{color:0x1a4a1a}}));
+    const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.1, 4), new THREE.MeshStandardMaterial({{color:0x1a4a1a, roughness:0.8}}));
     stem.position.y = -0.07;
     rose.add(stem);
     rose.position.set(pos.x, pos.y, pos.z);
@@ -990,7 +967,7 @@ const podTop = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.05, 0.35), darkWoodMa
 podTop.position.y = 1.15;
 podTop.rotation.x = -0.2;
 podium.add(podTop);
-const notes = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.01, 0.22), new THREE.MeshLambertMaterial({{color:0xffffee}}));
+const notes = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.01, 0.22), new THREE.MeshStandardMaterial({{color:0xffffee, roughness:1.0}}));
 notes.position.set(0, 1.2, 0);
 notes.rotation.x = -0.2;
 podium.add(notes);
@@ -1013,20 +990,20 @@ for (let i = 0; i < particleCount; i++) {{
 }}
 particleGeo.setAttribute('position', new THREE.BufferAttribute(particlePos, 3));
 const particles = new THREE.Points(particleGeo, new THREE.PointsMaterial({{
-    color:{hx(c["particle_color"])}, size:0.06, transparent:true, opacity:0.45
+    color:{hx(c["particle_color"])}, size:0.06, transparent:true, opacity:0.6
 }}));
 scene.add(particles);
 
-// Ground Fog
+// Ground Fog (Smog effect)
 const fogPlanes = [];
 if (MODE !== 'clinical') {{
     for (let i = 0; i < 4; i++) {{
         const fogPlane = new THREE.Mesh(
             new THREE.PlaneGeometry(30, 30),
-            new THREE.MeshBasicMaterial({{ color:{hx(c["fog_color"])}, transparent:true, opacity:0.06+i*0.02, side:THREE.DoubleSide, depthWrite:false }})
+            new THREE.MeshBasicMaterial({{ color:{hx(c["fog_color"])}, transparent:true, opacity:0.1+i*0.03, side:THREE.DoubleSide, depthWrite:false }})
         );
         fogPlane.rotation.x = -Math.PI/2;
-        fogPlane.position.y = 0.1+i*0.12;
+        fogPlane.position.y = 0.1+i*0.15;
         scene.add(fogPlane);
         fogPlanes.push(fogPlane);
     }}
@@ -1180,19 +1157,18 @@ function animate() {{
     requestAnimationFrame(animate);
     const t = clock2.getElapsedTime();
 
-    // Gaslight flicker logic with stable modifiers
     gaslights.forEach((light, i) => {{
         const f = Math.sin(t*15+i*2.5)*{flicker_intensity} + Math.sin(t*31+i*4)*{flicker_intensity*0.5};
-        light.intensity = {c["light_intensity"]*5.0}*(1+f);
+        light.intensity = {c["light_intensity"]*8.0}*(1+f);
         if(glowMeshes[i]) glowMeshes[i].material.opacity = 0.7+f*0.3;
     }});
 
     chandelierLights.forEach((cl, i) => {{
-        cl.intensity = {c["light_intensity"]*2.0} + Math.sin(t*12+i*3)*0.5;
+        cl.intensity = {c["light_intensity"]*3.0} + Math.sin(t*12+i*3)*1.0;
     }});
 
     candelabras.forEach((cl, i) => {{
-        cl.intensity = {c["light_intensity"]*1.5} + Math.sin(t*8+i*5)*0.3;
+        cl.intensity = {c["light_intensity"]*2.0} + Math.sin(t*8+i*5)*0.8;
     }});
 
     // Pendulum
