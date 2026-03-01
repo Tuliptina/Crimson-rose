@@ -74,6 +74,36 @@ canvas{{display:block;width:100%!important;height:100%!important;}}
 #uv-btn{{position:absolute;top:15px;right:15px;background:rgba(0,0,0,0.7);color:{c["text"]};border:1px solid {c["text"]}66;padding:8px 14px;font-family:Georgia,serif;font-size:12px;cursor:pointer;z-index:200;border-radius:3px;transition:all 0.3s;}}
 #uv-btn:hover{{border-color:{c["text"]};background:rgba(0,0,0,0.9);}}
 #uv-btn.active{{background:rgba(60,0,120,0.8);border-color:#9944ff;color:#bb88ff;}}
+
+/* Detail Panel */
+#detail-overlay{{position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:300;opacity:0;pointer-events:none;transition:opacity 0.4s ease;}}
+#detail-overlay.active{{opacity:1;pointer-events:auto;}}
+
+#detail-panel{{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) scale(0.9);width:440px;max-width:92%;max-height:85%;background:{'rgba(26,20,16,0.97)' if mode=='gaslight' else 'rgba(10,5,5,0.97)' if mode=='gothic' else 'rgba(250,250,248,0.97)'};border:1px solid {c["text"]}66;border-radius:6px;z-index:310;opacity:0;transition:all 0.4s ease;overflow-y:auto;box-shadow:0 0 60px rgba(0,0,0,0.6);}}
+#detail-overlay.active #detail-panel{{opacity:1;transform:translate(-50%,-50%) scale(1);}}
+
+#detail-panel .dp-header{{padding:16px 20px 12px;border-bottom:1px solid {c["text"]}33;display:flex;justify-content:space-between;align-items:center;}}
+#detail-panel .dp-title{{font-family:Georgia,serif;font-size:18px;font-weight:bold;color:{c["text"]};letter-spacing:1px;}}
+#detail-panel .dp-close{{background:none;border:1px solid {c["text"]}44;color:{c["text"]};width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;transition:all 0.2s;}}
+#detail-panel .dp-close:hover{{border-color:{c["text"]};background:{'rgba(139,0,0,0.3)' if mode=='gothic' else 'rgba(255,255,255,0.1)'};}}
+
+#detail-panel .dp-canvas-wrap{{display:flex;justify-content:center;padding:20px;background:{'rgba(0,0,0,0.2)' if mode!='clinical' else 'rgba(0,0,0,0.05)'};}}
+#detail-canvas{{border-radius:4px;}}
+
+#detail-panel .dp-body{{padding:16px 20px;}}
+#detail-panel .dp-desc{{font-family:Georgia,serif;color:{c["text"]};font-size:13px;line-height:1.7;margin-bottom:12px;}}
+#detail-panel .dp-lore{{font-family:Georgia,serif;color:{c["text"]};font-size:12px;font-style:italic;line-height:1.6;opacity:0.75;padding:10px 14px;border-left:3px solid {'#8b0000' if mode=='gothic' else c["text"]}66;margin-bottom:14px;background:{'rgba(139,0,0,0.08)' if mode=='gothic' else 'rgba(255,255,255,0.03)'};}}
+#detail-panel .dp-warning{{font-family:Georgia,serif;font-size:11px;color:{'#cc4444' if mode!='clinical' else '#993333'};padding:8px 12px;border:1px solid {'#cc444433' if mode!='clinical' else '#99333333'};border-radius:3px;margin-bottom:14px;}}
+
+#detail-panel .dp-actions{{display:flex;gap:10px;padding:0 20px 16px;}}
+#detail-panel .dp-btn{{flex:1;padding:10px;font-family:Georgia,serif;font-size:13px;cursor:pointer;border-radius:3px;transition:all 0.3s;text-align:center;}}
+#detail-panel .dp-btn-shake{{background:{'rgba(139,69,19,0.3)' if mode=='gaslight' else 'rgba(139,0,0,0.3)' if mode=='gothic' else 'rgba(47,79,79,0.15)'};border:1px solid {c["text"]}44;color:{c["text"]};}}
+#detail-panel .dp-btn-shake:hover{{border-color:{c["text"]};background:{'rgba(139,69,19,0.5)' if mode=='gaslight' else 'rgba(139,0,0,0.5)' if mode=='gothic' else 'rgba(47,79,79,0.25)'};}}
+#detail-panel .dp-btn-shake.shaking{{animation:btnPulse 0.6s ease;}}
+
+@keyframes btnPulse{{0%{{transform:scale(1);}}50%{{transform:scale(0.95);}}100%{{transform:scale(1);}}}}
+@keyframes bottleShake{{0%,100%{{transform:translate(0,0) rotate(0deg);}}10%{{transform:translate(-8px,2px) rotate(-4deg);}}20%{{transform:translate(6px,-2px) rotate(3deg);}}30%{{transform:translate(-6px,1px) rotate(-3deg);}}40%{{transform:translate(5px,-1px) rotate(2deg);}}50%{{transform:translate(-4px,1px) rotate(-2deg);}}60%{{transform:translate(3px,0) rotate(1deg);}}70%{{transform:translate(-2px,0) rotate(-1deg);}}80%{{transform:translate(1px,0) rotate(0.5deg);}}90%{{transform:translate(-1px,0) rotate(0deg);}}}}
+#detail-canvas.shaking{{animation:bottleShake 0.7s ease;}}
 </style>
 </head>
 <body>
@@ -84,6 +114,26 @@ canvas{{display:block;width:100%!important;height:100%!important;}}
 <div id="info">Drag to orbit · Scroll to zoom · Click objects to examine</div>
 <button id="uv-btn" onclick="toggleUV()">🔦 UV Light</button>
 <div id="tooltip"><div class="title"></div><div class="desc"></div><div class="lore"></div></div>
+
+<div id="detail-overlay" onclick="if(event.target===this)closeDetail()">
+  <div id="detail-panel">
+    <div class="dp-header">
+      <div class="dp-title" id="dp-title"></div>
+      <button class="dp-close" onclick="closeDetail()">✕</button>
+    </div>
+    <div class="dp-canvas-wrap">
+      <canvas id="detail-canvas" width="240" height="320"></canvas>
+    </div>
+    <div class="dp-body">
+      <div class="dp-desc" id="dp-desc"></div>
+      <div class="dp-warning" id="dp-warning"></div>
+      <div class="dp-lore" id="dp-lore"></div>
+    </div>
+    <div class="dp-actions">
+      <button class="dp-btn dp-btn-shake" onclick="shakeBottle()">🫗 Shake Bottle</button>
+    </div>
+  </div>
+</div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
@@ -226,24 +276,24 @@ scene.add(cabinet);
 // ============ BOTTLES ============
 const bottleData = [
     // Shelf 1 (bottom)
-    {{ x:-1.0, y:0.68, h:0.35, r:0.06, color:0xaa4444, label:'Laudanum', desc:'Tincture of opium. For pain.', lore:'Half empty. Someone has been dosing.' }},
-    {{ x:-0.5, y:0.68, h:0.28, r:0.07, color:0x44aa44, label:'Strychnine', desc:'Poison. Or cure, in small doses.', lore:'Fitzroy kept this close. Always.' }},
-    {{ x:0.0, y:0.68, h:0.4, r:0.05, color:0x4444aa, label:'Mercury Chloride', desc:'Antiseptic. Highly toxic.', lore:'The standard treatment. The standard death.' }},
-    {{ x:0.5, y:0.68, h:0.3, r:0.065, color:0xaa8844, label:'Chloroform', desc:'Anaesthetic. Sweet-smelling oblivion.', lore:'How many were silenced with this?' }},
+    {{ x:-1.0, y:0.68, h:0.35, r:0.06, color:0xaa4444, label:'Laudanum', desc:'Tincture of opium dissolved in alcohol. Approximately 10% opium by weight. Prescribed for pain, insomnia, and hysteria.', lore:'Half empty. Someone has been dosing regularly. The neck shows fingerprints — hurried, frantic grabs.', warning:'Highly addictive. Withdrawal may prove fatal.' }},
+    {{ x:-0.5, y:0.68, h:0.28, r:0.07, color:0x44aa44, label:'Strychnine', desc:'Poison in large doses, stimulant in minute quantities. Extracted from the seeds of Strychnos nux-vomica.', lore:'Fitzroy kept this close. Always. The seal has been broken and resealed multiple times.', warning:'LETHAL. Even small miscalculations in dosage are fatal.' }},
+    {{ x:0.0, y:0.68, h:0.4, r:0.05, color:0x4444aa, label:'Mercury Chloride', desc:'Antiseptic and disinfectant. Used in treatment of syphilis. Corrosive to organic tissue.', lore:'The standard treatment. The standard death. Three patients this month alone.', warning:'Corrosive poison. Causes organ failure with prolonged use.' }},
+    {{ x:0.5, y:0.68, h:0.3, r:0.065, color:0xaa8844, label:'Chloroform', desc:'Anaesthetic compound. Sweet-smelling volatile liquid used to render patients unconscious.', lore:'How many were silenced with this? The cloth beside it is still damp.', warning:'Overdose causes cardiac arrest. Handle in ventilated area.' }},
     // Shelf 2
-    {{ x:-0.8, y:1.33, h:0.32, r:0.055, color:0x884488, label:'Belladonna', desc:'Deadly nightshade extract.', lore:'"Beautiful lady." The irony is not lost.' }},
-    {{ x:-0.2, y:1.33, h:0.38, r:0.06, color:0xcc8833, label:'Vita Aeterna', desc:'The label is handwritten. The liquid glows faintly.', lore:'Protocol Seven. The key ingredient.' }},
-    {{ x:0.5, y:1.33, h:0.25, r:0.07, color:0x448888, label:'Ether', desc:'Volatile anaesthetic compound.', lore:'The smell of progress. And forgetting.' }},
-    {{ x:1.1, y:1.33, h:0.35, r:0.05, color:0x888844, label:'Arsenic', desc:'The king of poisons.', lore:'Three deaths. Same symptoms. Coincidence?' }},
+    {{ x:-0.8, y:1.33, h:0.32, r:0.055, color:0x884488, label:'Belladonna', desc:'Extract of deadly nightshade. Dilates pupils, reduces secretions. Used in eye examinations.', lore:'"Beautiful lady." The irony is not lost. Women took this to appear attractive — and died for it.', warning:'Toxic alkaloid. Hallucinations precede death.' }},
+    {{ x:-0.2, y:1.33, h:0.38, r:0.06, color:0xcc8833, label:'Vita Aeterna', desc:'The label is handwritten in careful script. The liquid glows faintly amber, as if lit from within.', lore:'Protocol Seven. The key ingredient. No known pharmaceutical formula matches this compound.', warning:'UNKNOWN SUBSTANCE. No dosage guidelines exist.' }},
+    {{ x:0.5, y:1.33, h:0.25, r:0.07, color:0x448888, label:'Ether', desc:'Volatile anaesthetic compound. Inhaled to produce unconsciousness. Highly flammable.', lore:'The smell of progress. And forgetting. How convenient.', warning:'Extremely flammable. Explosive when concentrated.' }},
+    {{ x:1.1, y:1.33, h:0.35, r:0.05, color:0x888844, label:'Arsenic', desc:'The king of poisons. White powder, nearly tasteless. Used in pesticides and, historically, murder.', lore:'Three deaths this quarter. Same symptoms. Same ward. Coincidence?', warning:'LETHAL. Symptoms mimic natural illness — the perfect poison.' }},
     // Shelf 3
-    {{ x:-1.0, y:1.98, h:0.3, r:0.06, color:0xaa2222, label:'Blood Sample', desc:'Dark. Almost black. Not human?', lore:'Label reads: "S.C." Sebastian Carlisle.' }},
-    {{ x:-0.3, y:1.98, h:0.35, r:0.055, color:0x66aa66, label:'Digitalis', desc:'Foxglove extract. Heart medicine.', lore:'The difference between medicine and murder is dosage.' }},
-    {{ x:0.4, y:1.98, h:0.28, r:0.065, color:0xdddd44, label:'Phosphorus', desc:'Glows in darkness. Burns in light.', lore:'Used in the development process. Details redacted.' }},
-    {{ x:1.0, y:1.98, h:0.32, r:0.06, color:0x222222, label:'[UNMARKED]', desc:'No label. The glass is warm to the touch.', lore:'DO NOT OPEN. DO NOT OPEN. DO NOT OPEN.' }},
+    {{ x:-1.0, y:1.98, h:0.3, r:0.06, color:0xaa2222, label:'Blood Sample', desc:'Dark, almost black fluid in a sealed vessel. Viscosity is unusual — thicker than expected for human blood.', lore:'Label reads: "S.C." Sebastian Carlisle. Why is his blood being preserved?', warning:'Biohazard. Unknown pathogenic properties.' }},
+    {{ x:-0.3, y:1.98, h:0.35, r:0.055, color:0x66aa66, label:'Digitalis', desc:'Extract of foxglove. Strengthens and regulates heartbeat. Critical cardiac medicine.', lore:'The difference between medicine and murder is dosage. Fitzroy knew this well.', warning:'Narrow therapeutic window. Overdose causes fatal arrhythmia.' }},
+    {{ x:0.4, y:1.98, h:0.28, r:0.065, color:0xdddd44, label:'Phosphorus', desc:'Luminescent element. Glows pale green in darkness. Burns spontaneously on contact with air.', lore:'Used in the development process. Details redacted from all official records.', warning:'INCENDIARY. Contact with skin causes deep chemical burns.' }},
+    {{ x:1.0, y:1.98, h:0.32, r:0.06, color:0x222222, label:'[UNMARKED]', desc:'No label. No markings. The glass is warm to the touch despite the cold room. The liquid inside is perfectly still.', lore:'DO NOT OPEN. DO NOT OPEN. DO NOT OPEN.', warning:'CONTENTS UNKNOWN. Do not handle without authorization.' }},
     // Shelf 4 (top)
-    {{ x:-0.6, y:2.58, h:0.22, r:0.05, color:0xcc4444, label:'Morphine', desc:'Distilled mercy.', lore:'Requisitioned in bulk. For what?' }},
-    {{ x:0.1, y:2.58, h:0.3, r:0.06, color:0x8888cc, label:'Formaldehyde', desc:'Preservation fluid.', lore:'The dead must be kept fresh for study.' }},
-    {{ x:0.8, y:2.58, h:0.26, r:0.055, color:0xccaa88, label:'Quinine', desc:'Antimalarial. Bitter truth in a bottle.', lore:'Imported. Expensive. Who pays?' }},
+    {{ x:-0.6, y:2.58, h:0.22, r:0.05, color:0xcc4444, label:'Morphine', desc:'Distilled mercy. Extracted from opium. The most powerful analgesic known to medicine.', lore:'Requisitioned in bulk — 40 vials this month. For what? The ward only holds twelve patients.', warning:'Profoundly addictive. Respiratory depression at high doses.' }},
+    {{ x:0.1, y:2.58, h:0.3, r:0.06, color:0x8888cc, label:'Formaldehyde', desc:'Preservation fluid. Prevents decomposition of organic tissue. Sharp, penetrating odour.', lore:'The dead must be kept fresh for study. But some of these specimens predate the hospital.', warning:'Toxic vapours. Suspected carcinogen.' }},
+    {{ x:0.8, y:2.58, h:0.26, r:0.055, color:0xccaa88, label:'Quinine', desc:'Antimalarial derived from cinchona bark. Bitter crystalline compound dissolved in tonic water.', lore:'Imported. Expensive. Who pays for a workhouse hospital to stock luxury medicines?', warning:'Cardiac toxicity at high doses. Causes cinchonism.' }},
 ];
 
 const bottles = [];
@@ -295,7 +345,8 @@ bottleData.forEach((b, idx) => {{
     bottle.add(label);
 
     bottle.position.set(b.x, b.y, 0.05);
-    bottle.userData = {{ type: 'bottle', title: b.label, desc: b.desc, lore: INTENSITY >= 2 ? b.lore : '' }};
+    const hexColor = '#' + b.color.toString(16).padStart(6, '0');
+    bottle.userData = {{ type: 'bottle', title: b.label, desc: b.desc, lore: INTENSITY >= 2 ? b.lore : '', color: hexColor, warning: b.warning || '' }};
 
     scene.add(bottle);
     bottles.push(bottle);
@@ -909,7 +960,267 @@ updateCam();
 
 // ============ CLICK INTERACTION ============
 const tooltip = document.getElementById('tooltip');
+const detailOverlay = document.getElementById('detail-overlay');
+let currentBottleData = null;
+let shakeTimer = null;
+let liquidOffset = 0;
+let liquidAnimFrame = null;
 
+// 2D bottle renderer
+function drawBottle2D(bottleData, shakeOffset) {{
+    const canvas = document.getElementById('detail-canvas');
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width, H = canvas.height;
+    ctx.clearRect(0, 0, W, H);
+
+    const cx = W / 2 + (shakeOffset || 0);
+    const bW = 70, bH = 160;
+    const neckW = 28, neckH = 40;
+    const corkW = 32, corkH = 18;
+    const bottomY = H * 0.78;
+    const topY = bottomY - bH;
+    const color = bottleData.color || '#aa4444';
+
+    ctx.save();
+
+    // Shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.2)';
+    ctx.beginPath();
+    ctx.ellipse(cx + 4, bottomY + 6, bW / 2 + 5, 8, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Bottle body
+    const bodyGrad = ctx.createLinearGradient(cx - bW / 2, 0, cx + bW / 2, 0);
+    bodyGrad.addColorStop(0, shadeColor(color, -30));
+    bodyGrad.addColorStop(0.3, shadeColor(color, 20));
+    bodyGrad.addColorStop(0.7, color);
+    bodyGrad.addColorStop(1, shadeColor(color, -40));
+
+    ctx.fillStyle = bodyGrad;
+    ctx.beginPath();
+    ctx.moveTo(cx - bW / 2, bottomY);
+    ctx.lineTo(cx - bW / 2 + 3, topY + 10);
+    ctx.quadraticCurveTo(cx - bW / 2 + 3, topY, cx - neckW / 2, topY);
+    ctx.lineTo(cx - neckW / 2, topY - neckH);
+    ctx.lineTo(cx + neckW / 2, topY - neckH);
+    ctx.lineTo(cx + neckW / 2, topY);
+    ctx.quadraticCurveTo(cx + bW / 2 - 3, topY, cx + bW / 2 - 3, topY + 10);
+    ctx.lineTo(cx + bW / 2, bottomY);
+    ctx.closePath();
+    ctx.fill();
+
+    // Glass outline
+    ctx.strokeStyle = shadeColor(color, 40);
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // Liquid inside
+    const fillLevel = 0.55 + Math.sin(liquidOffset) * 0.03;
+    const liquidTop = bottomY - bH * fillLevel;
+    const liquidGrad = ctx.createLinearGradient(0, liquidTop, 0, bottomY);
+    liquidGrad.addColorStop(0, shadeColor(color, -10) + 'cc');
+    liquidGrad.addColorStop(1, shadeColor(color, -40) + 'ee');
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(cx - bW / 2 + 4, bottomY);
+    ctx.lineTo(cx - bW / 2 + 5, topY + 12);
+    ctx.quadraticCurveTo(cx - bW / 2 + 5, topY + 4, cx - neckW / 2 + 2, topY + 4);
+    ctx.lineTo(cx + neckW / 2 - 2, topY + 4);
+    ctx.quadraticCurveTo(cx + bW / 2 - 5, topY + 4, cx + bW / 2 - 5, topY + 12);
+    ctx.lineTo(cx + bW / 2 - 4, bottomY);
+    ctx.closePath();
+    ctx.clip();
+
+    ctx.fillStyle = liquidGrad;
+    // Wavy liquid surface
+    ctx.beginPath();
+    ctx.moveTo(cx - bW / 2, bottomY);
+    ctx.lineTo(cx - bW / 2, liquidTop);
+    for (let x = cx - bW / 2; x <= cx + bW / 2; x += 4) {{
+        const wave = Math.sin((x - cx) * 0.08 + liquidOffset * 3) * 3;
+        ctx.lineTo(x, liquidTop + wave);
+    }}
+    ctx.lineTo(cx + bW / 2, bottomY);
+    ctx.closePath();
+    ctx.fill();
+
+    // Bubbles
+    const bubbleCount = Math.floor(3 + Math.sin(liquidOffset * 2) * 2);
+    for (let i = 0; i < bubbleCount; i++) {{
+        const bx = cx - bW / 3 + Math.sin(liquidOffset + i * 2.5) * (bW / 3);
+        const by = bottomY - 20 - (((liquidOffset * 30 + i * 40) % (bH * fillLevel - 20)));
+        const br = 2 + Math.sin(i + liquidOffset) * 1.5;
+        if (by > liquidTop + 5) {{
+            ctx.fillStyle = 'rgba(255,255,255,0.15)';
+            ctx.beginPath();
+            ctx.arc(bx, by, br, 0, Math.PI * 2);
+            ctx.fill();
+        }}
+    }}
+    ctx.restore();
+
+    // Glass highlight
+    ctx.fillStyle = 'rgba(255,255,255,0.08)';
+    ctx.beginPath();
+    ctx.ellipse(cx - bW / 4, topY + bH / 3, 8, bH / 3, -0.15, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Cork
+    const corkGrad = ctx.createLinearGradient(cx - corkW / 2, 0, cx + corkW / 2, 0);
+    corkGrad.addColorStop(0, '#6b5440');
+    corkGrad.addColorStop(0.4, '#9b8370');
+    corkGrad.addColorStop(0.8, '#8b7355');
+    corkGrad.addColorStop(1, '#5b4430');
+    ctx.fillStyle = corkGrad;
+    ctx.fillRect(cx - corkW / 2, topY - neckH - corkH, corkW, corkH);
+    ctx.strokeStyle = '#5b4430';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(cx - corkW / 2, topY - neckH - corkH, corkW, corkH);
+
+    // Cork texture lines
+    ctx.strokeStyle = 'rgba(90,60,40,0.3)';
+    ctx.lineWidth = 0.5;
+    for (let i = 0; i < 4; i++) {{
+        const ly = topY - neckH - corkH + 4 + i * 4;
+        ctx.beginPath();
+        ctx.moveTo(cx - corkW / 2 + 3, ly);
+        ctx.lineTo(cx + corkW / 2 - 3, ly);
+        ctx.stroke();
+    }}
+
+    // Wax seal on top
+    ctx.fillStyle = '{c["text"]}';
+    ctx.beginPath();
+    ctx.arc(cx, topY - neckH - corkH - 2, corkW / 2 + 3, Math.PI, 0);
+    ctx.fill();
+
+    // Label
+    const labelW = 64, labelH = 48;
+    const labelY = topY + bH * 0.3;
+    const labelGrad = ctx.createLinearGradient(0, labelY, 0, labelY + labelH);
+    labelGrad.addColorStop(0, '{c["text"]}11');
+    labelGrad.addColorStop(0.5, '#ffffee');
+    labelGrad.addColorStop(1, '#eee8d0');
+    ctx.fillStyle = labelGrad;
+    ctx.fillRect(cx - labelW / 2, labelY, labelW, labelH);
+    ctx.strokeStyle = '#8b7355';
+    ctx.lineWidth = 0.8;
+    ctx.strokeRect(cx - labelW / 2, labelY, labelW, labelH);
+
+    // Label text
+    ctx.fillStyle = '#333';
+    ctx.font = 'bold 11px Georgia';
+    ctx.textAlign = 'center';
+    const name = bottleData.title || 'Unknown';
+    if (name.length > 12) {{
+        ctx.font = 'bold 9px Georgia';
+    }}
+    ctx.fillText(name, cx, labelY + labelH / 2 + 4);
+
+    // Decorative line on label
+    ctx.strokeStyle = '#8b735555';
+    ctx.lineWidth = 0.5;
+    ctx.beginPath();
+    ctx.moveTo(cx - labelW / 3, labelY + 8);
+    ctx.lineTo(cx + labelW / 3, labelY + 8);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(cx - labelW / 3, labelY + labelH - 8);
+    ctx.lineTo(cx + labelW / 3, labelY + labelH - 8);
+    ctx.stroke();
+
+    ctx.restore();
+}}
+
+function shadeColor(hex, amt) {{
+    // Convert color name or hex to darker/lighter
+    let r, g, b;
+    if (hex.startsWith('#')) {{
+        const num = parseInt(hex.slice(1), 16);
+        r = (num >> 16) & 0xff;
+        g = (num >> 8) & 0xff;
+        b = num & 0xff;
+    }} else {{
+        r = 170; g = 68; b = 68; // fallback
+    }}
+    r = Math.max(0, Math.min(255, r + amt));
+    g = Math.max(0, Math.min(255, g + amt));
+    b = Math.max(0, Math.min(255, b + amt));
+    return '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+}}
+
+function showDetail(data) {{
+    currentBottleData = data;
+    document.getElementById('dp-title').textContent = data.title || 'Unknown Substance';
+    document.getElementById('dp-desc').innerHTML = '<strong>Contents:</strong> ' + (data.desc || 'No description available.');
+
+    const warningEl = document.getElementById('dp-warning');
+    if (data.warning) {{
+        warningEl.textContent = '⚠ ' + data.warning;
+        warningEl.style.display = 'block';
+    }} else {{
+        warningEl.style.display = 'none';
+    }}
+
+    const loreEl = document.getElementById('dp-lore');
+    if (data.lore && INTENSITY >= 2) {{
+        loreEl.innerHTML = '🕵 <em>' + data.lore + '</em>';
+        loreEl.style.display = 'block';
+    }} else {{
+        loreEl.style.display = 'none';
+    }}
+
+    detailOverlay.classList.add('active');
+    liquidOffset = 0;
+    drawBottle2D(data);
+    startLiquidAnim();
+}}
+
+function closeDetail() {{
+    detailOverlay.classList.remove('active');
+    currentBottleData = null;
+    if (liquidAnimFrame) cancelAnimationFrame(liquidAnimFrame);
+}}
+
+function startLiquidAnim() {{
+    function tick() {{
+        liquidOffset += 0.02;
+        if (currentBottleData) {{
+            drawBottle2D(currentBottleData);
+            liquidAnimFrame = requestAnimationFrame(tick);
+        }}
+    }}
+    tick();
+}}
+
+window.shakeBottle = function() {{
+    const canvas = document.getElementById('detail-canvas');
+    const btn = document.querySelector('.dp-btn-shake');
+    canvas.classList.remove('shaking');
+    btn.classList.remove('shaking');
+    void canvas.offsetWidth; // force reflow
+    canvas.classList.add('shaking');
+    btn.classList.add('shaking');
+
+    // Agitate liquid faster during shake
+    let shakeFrames = 0;
+    const origOffset = liquidOffset;
+    function shakeAnim() {{
+        shakeFrames++;
+        liquidOffset += 0.15;
+        if (currentBottleData) drawBottle2D(currentBottleData);
+        if (shakeFrames < 25) requestAnimationFrame(shakeAnim);
+    }}
+    shakeAnim();
+
+    setTimeout(() => {{
+        canvas.classList.remove('shaking');
+        btn.classList.remove('shaking');
+    }}, 750);
+}};
+
+// Click: bottles open detail panel, other objects show tooltip
 renderer.domElement.addEventListener('click', e => {{
     const cm = new THREE.Vector2((e.clientX / window.innerWidth) * 2 - 1, -(e.clientY / window.innerHeight) * 2 + 1);
     raycaster.setFromCamera(cm, camera);
@@ -918,13 +1229,20 @@ renderer.domElement.addEventListener('click', e => {{
         let obj = hit.object;
         while (obj && !obj.userData.type) obj = obj.parent;
         if (obj && obj.userData.type) {{
-            tooltip.querySelector('.title').textContent = obj.userData.title || '';
-            tooltip.querySelector('.desc').textContent = obj.userData.desc || '';
-            tooltip.querySelector('.lore').textContent = obj.userData.lore || '';
-            tooltip.querySelector('.lore').style.display = obj.userData.lore ? 'block' : 'none';
-            tooltip.style.left = Math.min(e.clientX + 15, window.innerWidth - 280) + 'px';
-            tooltip.style.top = Math.min(e.clientY + 15, window.innerHeight - 130) + 'px';
-            tooltip.classList.add('visible');
+            if (obj.userData.type === 'bottle') {{
+                // Open detail panel for bottles
+                tooltip.classList.remove('visible');
+                showDetail(obj.userData);
+            }} else {{
+                // Tooltip for everything else
+                tooltip.querySelector('.title').textContent = obj.userData.title || '';
+                tooltip.querySelector('.desc').textContent = obj.userData.desc || '';
+                tooltip.querySelector('.lore').textContent = obj.userData.lore || '';
+                tooltip.querySelector('.lore').style.display = obj.userData.lore ? 'block' : 'none';
+                tooltip.style.left = Math.min(e.clientX + 15, window.innerWidth - 280) + 'px';
+                tooltip.style.top = Math.min(e.clientY + 15, window.innerHeight - 130) + 'px';
+                tooltip.classList.add('visible');
+            }}
             return;
         }}
     }}
