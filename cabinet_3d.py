@@ -243,10 +243,12 @@ const DI=[
 const ctr=E('container'),scene=new THREE.Scene();
 scene.background=new THREE.Color({bg});
 if(MD!=='clinical')scene.fog=new THREE.FogExp2({bg},0.025);
-const cam=new THREE.PerspectiveCamera(50,innerWidth/innerHeight,0.1,100);
+function cW(){{return ctr.clientWidth||innerWidth||600;}}
+function cH(){{return ctr.clientHeight||innerHeight||500;}}
+const cam=new THREE.PerspectiveCamera(50,cW()/cH(),0.1,100);
 cam.position.set(0,1.5,6);cam.lookAt(0,1.2,0);
 const ren=new THREE.WebGLRenderer({{antialias:true}});
-ren.setSize(innerWidth,innerHeight);ren.setPixelRatio(Math.min(devicePixelRatio,2));
+ren.setSize(cW(),cH());ren.setPixelRatio(Math.min(devicePixelRatio,2));
 ren.shadowMap.enabled=true;ctr.appendChild(ren.domElement);
 const ray=new THREE.Raycaster(),mouse=new THREE.Vector2();
 
@@ -569,7 +571,7 @@ function updCam(){{
 ren.domElement.onmousedown=e=>{{isD=true;hasMv=false;px=e.clientX;py=e.clientY;}};
 window.onmouseup=()=>{{isD=false;}};
 ren.domElement.onmousemove=e=>{{
-    mouse.x=(e.clientX/innerWidth)*2-1;mouse.y=-(e.clientY/innerHeight)*2+1;
+    mouse.x=(e.clientX/cW())*2-1;mouse.y=-(e.clientY/cH())*2+1;
     if(isD){{const dx=e.clientX-px,dy=e.clientY-py;if(Math.abs(dx)>3||Math.abs(dy)>3)hasMv=true;if(hasMv){{theta+=dx*0.005;phi=Math.max(0.5,Math.min(1.5,phi+dy*0.005));px=e.clientX;py=e.clientY;updCam();}}}}
 }};
 ren.domElement.onwheel=e=>{{e.preventDefault();dist=Math.max(3.5,Math.min(10,dist+e.deltaY*0.005));updCam();}};
@@ -796,12 +798,12 @@ function checkHidden(){{bkCl++;if(bkCl>=3&&!hidF){{hidF=true;E('hid-flash').styl
 /* ===== CLICK ===== */
 ren.domElement.onclick=e=>{{
     if(hasMv)return;
-    const cm=new THREE.Vector2((e.clientX/innerWidth)*2-1,-(e.clientY/innerHeight)*2+1);
+    const cm=new THREE.Vector2((e.clientX/cW())*2-1,-(e.clientY/cH())*2+1);
     ray.setFromCamera(cm,cam);
     const bH=ray.intersectObjects(bottles,true);
     if(bH.length){{let o=bH[0].object;if(o.userData.bRef){{showZoom(o.userData.bRef);crossReact('open',o.userData.bRef.id);return;}}while(o){{if(o.userData&&o.userData.id){{showZoom(o.userData);crossReact('open',o.userData.id);return;}}o=o.parent;}}}}
     const pH=ray.intersectObjects(propG,true);
-    if(pH.length){{let o=pH[0].object;while(o&&!o.userData.type)o=o.parent;if(o&&o.userData.type){{const tip=E('tooltip');tip.querySelector('.tt').textContent=o.userData.title||'';tip.querySelector('.td').textContent=o.userData.desc||'';tip.querySelector('.tl').textContent=o.userData.lore||'';tip.querySelector('.tl').style.display=o.userData.lore?'block':'none';tip.style.left=Math.min(e.clientX+15,innerWidth-260)+'px';tip.style.top=Math.min(e.clientY+15,innerHeight-130)+'px';tip.classList.add('vis');return;}}}}
+    if(pH.length){{let o=pH[0].object;while(o&&!o.userData.type)o=o.parent;if(o&&o.userData.type){{const tip=E('tooltip');tip.querySelector('.tt').textContent=o.userData.title||'';tip.querySelector('.td').textContent=o.userData.desc||'';tip.querySelector('.tl').textContent=o.userData.lore||'';tip.querySelector('.tl').style.display=o.userData.lore?'block':'none';tip.style.left=Math.min(e.clientX+15,cW()-260)+'px';tip.style.top=Math.min(e.clientY+15,cH()-130)+'px';tip.classList.add('vis');return;}}}}
     const bkH=ray.intersectObject(bk);if(bkH.length)checkHidden();
     E('tooltip').classList.remove('vis');
 }};
@@ -823,7 +825,7 @@ function animate(){{
     if(uvOn)uvL.intensity=2+Math.sin(t*10)*0.3;
     ren.render(scene,cam);
 }}
-window.onresize=()=>{{cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix();ren.setSize(innerWidth,innerHeight);}};
+window.onresize=()=>{{cam.aspect=cW()/cH();cam.updateProjectionMatrix();ren.setSize(cW(),cH());}};
 animate();
 }})();
 </script></body></html>'''
