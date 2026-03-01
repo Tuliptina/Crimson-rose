@@ -202,6 +202,8 @@ const INTENSITY = {intensity};
 const NIGHTMARE = {nightmare};
 const CREEP = {creep};
 
+console.log('Cabinet starting...', {{ INTENSITY, NIGHTMARE, CREEP }});
+
 let secrets = 0, uvMode = false, hiddenFound = false;
 const found = new Set();
 const mixSlots = [null, null];
@@ -291,6 +293,7 @@ const renderer = new THREE.WebGLRenderer({{ antialias:true }});
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 container.appendChild(renderer.domElement);
+console.log('Renderer attached to container');
 
 const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
@@ -301,7 +304,9 @@ scene.add(new THREE.HemisphereLight(0xffffff, {wood_dark}, 0.4));
 const dir = new THREE.DirectionalLight({light}, 1.0);
 dir.position.set(3, 5, 4);
 scene.add(dir);
-scene.add(new THREE.PointLight({light}, 0.6, 20).position.set(-3, 3, 3));
+const fill = new THREE.PointLight({light}, 0.6, 20);
+fill.position.set(-3, 3, 3);
+scene.add(fill);
 
 // UV Light (for blacklight mode)
 const uvLight = new THREE.PointLight(0x8800ff, 0, 15);
@@ -764,14 +769,20 @@ function createBottle(b) {{
     return g;
 }}
 
-BOTTLES.forEach(b => {{
-    const g = createBottle(b);
-    const p = slotPos(b.row, b.slot);
-    g.position.set(p.x, p.y, p.z);
-    g.userData = b;
-    scene.add(g);
-    bottles.push(g);
+BOTTLES.forEach((b, i) => {{
+    try {{
+        const g = createBottle(b);
+        const p = slotPos(b.row, b.slot);
+        g.position.set(p.x, p.y, p.z);
+        g.userData = b;
+        scene.add(g);
+        bottles.push(g);
+    }} catch(e) {{
+        console.error('Error creating bottle', i, b.id, e);
+    }}
 }});
+
+console.log('Bottles created:', bottles.length);
 
 // Camera controls
 let isDown=false, hasMoved=false, px=0, py=0, theta=0, phi=1.2, dist=6;
@@ -1240,8 +1251,14 @@ function animate() {{
     raycaster.setFromCamera(mouse, camera);
     const hits = raycaster.intersectObjects(bottles, true);
     bottles.forEach(b => {{
-        // Reset emissive on glass (child index 1 now due to hitbox)
-        if(b.children[1]) b.children[1].material.emissive = new THREE.Color(0);
+        // Reset emissive on glass meshes inside glassGroup (children[1])
+        if(b.children[1] && b.children[1].children) {{
+            b.children[1].children.forEach(child => {{
+                if(child.material && child.material.emissive) {{
+                    child.material.emissive.setHex(0x000000);
+                }}
+            }});
+        }}
     }});
     
     const hint = document.getElementById('hint');
@@ -1266,9 +1283,13 @@ function animate() {{
         if(hitData) {{
             // Find the bottle group and highlight glass
             const bottleGroup = bottles.find(b => b.userData.id === hitData.id);
-            if(bottleGroup && bottleGroup.children[1]) {{
-                bottleGroup.children[1].material.emissive = new THREE.Color({light});
-                bottleGroup.children[1].material.emissiveIntensity = uvMode ? 0.4 : 0.2;
+            if(bottleGroup && bottleGroup.children[1] && bottleGroup.children[1].children) {{
+                bottleGroup.children[1].children.forEach(child => {{
+                    if(child.material && child.material.emissive) {{
+                        child.material.emissive.setHex({light});
+                        child.material.emissiveIntensity = uvMode ? 0.4 : 0.2;
+                    }}
+                }});
             }}
             hint.textContent = hitData.name;
             hint.style.opacity = 1;
@@ -1279,20 +1300,28 @@ function animate() {{
     
     // Bottle animations (3D)
     bottles.forEach(b => {{
-        // Glass is now child[1], liquid is child[2] (hitbox is child[0])
-        if(b.userData.special === 'swirl' && b.children[2]) {{
-            b.children[2].rotation.y = t * 0.5;
+        const glassGroup = b.children[1];
+        const liquid = b.children[2];
+        
+        if(b.userData.special === 'swirl' && liquid) {{
+            liquid.rotation.y = t * 0.5;
         }}
-        if(b.userData.special === 'leeches' && b.children[2]) {{
-            b.children[2].scale.y = 1 + Math.sin(t*2)*0.05;
+        if(b.userData.special === 'leeches' && liquid) {{
+            liquid.scale.y = 1 + Math.sin(t*2)*0.05;
         }}
-        if(b.userData.anim === 'pulse' && b.children[1]) {{
-            b.children[1].material.opacity = 0.5 + Math.sin(t*3)*0.15;
+        if(b.userData.anim === 'pulse' && glassGroup && glassGroup.children) {{
+            glassGroup.children.forEach(child => {{
+                if(child.material) child.material.opacity = 0.5 + Math.sin(t*3)*0.15;
+            }});
         }}
         // UV glow
-        if(uvMode && b.userData.uv && b.children[1]) {{
-            b.children[1].material.emissive = new THREE.Color(0x440066);
-            b.children[1].material.emissiveIntensity = 0.3 + Math.sin(t*4)*0.1;
+        if(uvMode && b.userData.uv && glassGroup && glassGroup.children) {{
+            glassGroup.children.forEach(child => {{
+                if(child.material && child.material.emissive) {{
+                    child.material.emissive.setHex(0x440066);
+                    child.material.emissiveIntensity = 0.3 + Math.sin(t*4)*0.1;
+                }}
+            }});
         }}
     }});
     
@@ -1319,6 +1348,7 @@ window.onresize = () => {{
     renderer.setSize(window.innerWidth, window.innerHeight);
 }};
 
+console.log('Starting animation loop...');
 animate();
 }})();
 </script>
