@@ -367,10 +367,15 @@ function slotPos(row, slot) {{
 BOTTLES.forEach(b => {{
     const g = new THREE.Group();
     
-    // Invisible hitbox for easier clicking
+    // Hitbox for clicking - must have opacity > 0 to be raycast
+    const hitboxMat = new THREE.MeshBasicMaterial({{ 
+        transparent: true, 
+        opacity: 0.001,
+        depthWrite: false
+    }});
     const hitbox = new THREE.Mesh(
-        new THREE.BoxGeometry(0.22, 0.4, 0.22),
-        new THREE.MeshBasicMaterial({{ visible: false }})
+        new THREE.BoxGeometry(0.24, 0.44, 0.24),
+        hitboxMat
     );
     hitbox.userData = {{ bottleRef: b }};
     g.add(hitbox);
@@ -844,11 +849,7 @@ renderer.domElement.onclick = e => {{
     const cm = new THREE.Vector2((e.clientX/window.innerWidth)*2-1, -(e.clientY/window.innerHeight)*2+1);
     raycaster.setFromCamera(cm, camera);
     
-    // Check back panel
-    const backHit = raycaster.intersectObject(back);
-    if(backHit.length > 0) {{ checkHidden(); return; }}
-    
-    // Check bottles - look for bottleRef or id in userData
+    // Check bottles FIRST
     const hits = raycaster.intersectObjects(bottles, true);
     if(hits.length) {{
         let o = hits[0].object;
@@ -866,6 +867,10 @@ renderer.domElement.onclick = e => {{
             o = o.parent;
         }}
     }}
+    
+    // Only check back panel if no bottles hit
+    const backHit = raycaster.intersectObject(back);
+    if(backHit.length > 0) checkHidden();
 }};
 
 // Animation
