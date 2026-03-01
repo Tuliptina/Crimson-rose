@@ -3,11 +3,11 @@
 An immersive, atmospheric exploration of a Victorian anatomy theatre.
 Tied to the world of The Crimson Rose series.
 
-BUG FIXES:
-- Discovery state now tracked exclusively in st.session_state (not module-level dicts)
-- Specimen cards use single markdown blocks (proper HTML nesting)
-- Secret triggers use programmatic condition evaluation
-- Session state uses lists instead of sets for serialization safety
+BUG FIXES IMPLEMENTED:
+- Secret evaluation deferred to end of script execution to capture tab widget states
+- Secrets rendered globally via top-level placeholder container
+- Session state lists updated via strict reassignment
+- UI controls mapped to native session state keys
 """
 
 import streamlit as st
@@ -677,7 +677,6 @@ def render_anatomy_diagram(pov: str, mode: str) -> str:
 
 # =============================================================================
 # SESSION STATE INITIALIZATION
-# BUG FIX: Using lists instead of sets for serialization safety
 # =============================================================================
 
 def init_session_state():
@@ -686,9 +685,9 @@ def init_session_state():
         "mode": "gaslight",
         "intensity": 2,
         "visit_count": 0,
-        "discovered_secrets": [],     # BUG FIX: list instead of set
-        "examined_regions": [],        # BUG FIX: list instead of set
-        "examined_specimens": [],      # BUG FIX: list instead of set
+        "discovered_secrets": [],
+        "examined_regions": [],
+        "examined_specimens": [],
         "current_region": None,
         "show_intro": True,
         "random_seed": random.randint(0, 10000)
@@ -699,13 +698,13 @@ def init_session_state():
 
 
 # =============================================================================
-# HELPER: add to list without duplicates
+# HELPER: add to list without duplicates (BUG FIX: Strict Array Reassignment)
 # =============================================================================
 
-def add_to_list(lst: list, item) -> None:
-    """Add item to list if not already present (set-like behavior)."""
-    if item not in lst:
-        lst.append(item)
+def add_to_list(state_key: str, item) -> None:
+    """Safely append an item to a session state list via reassignment."""
+    if item not in st.session_state[state_key]:
+        st.session_state[state_key] = st.session_state[state_key] + [item]
 
 
 # =============================================================================
@@ -727,7 +726,7 @@ def try_reveal_secrets():
         if sid in st.session_state.discovered_secrets:
             continue
         if check_secret_condition(secret, pov, mode, intensity, regions, specimens, visits):
-            add_to_list(st.session_state.discovered_secrets, sid)
+            add_to_list("discovered_secrets", sid)
             revealed.append(secret)
 
     return revealed
@@ -813,26 +812,28 @@ def render_theatre():
     with st.expander("⚙️ Theatre Controls", expanded=False):
         col1, col2, col3 = st.columns(3)
         with col1:
-            new_mode = st.selectbox(
+            st.selectbox(
                 "Visual Mode",
                 ["gaslight", "gothic", "clinical"],
-                index=["gaslight", "gothic", "clinical"].index(mode),
+                key="mode",
                 format_func=lambda x: x.title()
             )
-            if new_mode != mode:
-                st.session_state.mode = new_mode
-                st.rerun()
         with col2:
-            new_intensity = st.slider("Intensity", 1, 5, intensity, help=INTENSITY_NAMES[intensity])
-            if new_intensity != intensity:
-                st.session_state.intensity = new_intensity
-                st.rerun()
+            st.slider(
+                "Intensity",
+                1, 5,
+                key="intensity",
+                help=INTENSITY_NAMES[st.session_state.intensity]
+            )
         with col3:
             if st.button("Change Perspective"):
                 st.session_state.show_intro = True
                 st.rerun()
 
     st.markdown("---")
+    
+    # Global placeholder to render newly discovered secrets above the tabs
+    secret_placeholder = st.container()
 
     tab1, tab2, tab3, tab4 = st.tabs(["🎭 3D Theatre", "📜 The Scene", "🔬 Anatomy", "🗄️ Specimens"])
 
@@ -844,6 +845,18 @@ def render_theatre():
         render_anatomy_tab(pov, mode)
     with tab4:
         render_specimens_tab(pov, mode)
+
+    # BUG FIX: Evaluate secrets after the tabs have rendered to catch any widget interactions, 
+    # but render the results back up into the secret_placeholder at the top of the UI.
+    revealed = try_reveal_secrets()
+    if revealed:
+        with secret_placeholder:
+            for secret in revealed:
+                st.markdown(
+                    f'<div class="secret-reveal" style="margin-bottom: 2rem;">'
+                    f'<strong>Something catches your attention...</strong><br><br>{secret["content"]}</div>',
+                    unsafe_allow_html=True
+                )
 
 
 def render_scene(pov: str, mode: str, intensity: int):
@@ -861,16 +874,6 @@ def render_scene(pov: str, mode: str, intensity: int):
     observation = get_ambient_observation(pov)
     st.markdown(f'<div class="narration" style="font-style: italic;">{observation}</div>',
                 unsafe_allow_html=True)
-
-    # BUG FIX: Use programmatic secret checking instead of substring matching
-    revealed = try_reveal_secrets()
-    for secret in revealed:
-        st.markdown("---")
-        st.markdown(
-            f'<div class="secret-reveal"><strong>Something catches your attention...</strong>'
-            f'<br><br>{secret["content"]}</div>',
-            unsafe_allow_html=True
-        )
 
 
 def render_anatomy_tab(pov: str, mode: str):
@@ -890,7 +893,7 @@ def render_anatomy_tab(pov: str, mode: str):
         )
 
         if region:
-            add_to_list(st.session_state.examined_regions, region)
+            add_to_list("examined_regions", region)
 
             layer_tab1, layer_tab2, layer_tab3 = st.tabs(["Medical", "Hidden", "Personal"])
 
@@ -904,13 +907,6 @@ def render_anatomy_tab(pov: str, mode: str):
             with layer_tab3:
                 emotional = get_anatomy_text(region, "emotional", pov)
                 st.markdown(f'<div class="specimen-text">{emotional}</div>', unsafe_allow_html=True)
-
-        # BUG FIX: Use programmatic secret checking
-        revealed = try_reveal_secrets()
-        for secret in revealed:
-            st.markdown("---")
-            st.markdown(f'<div class="secret-reveal">{secret["content"]}</div>',
-                        unsafe_allow_html=True)
 
 
 def render_specimens_tab(pov: str, mode: str):
@@ -930,10 +926,9 @@ def render_specimens_tab(pov: str, mode: str):
                 is_examined = specimen_id in st.session_state.examined_specimens
 
                 if st.button(f"🔍 {specimen['name']}", key=f"examine_{specimen_id}"):
-                    add_to_list(st.session_state.examined_specimens, specimen_id)
+                    add_to_list("examined_specimens", specimen_id)
                     is_examined = True
 
-                # BUG FIX: Single markdown block for proper HTML nesting
                 secret_html = ""
                 if is_examined:
                     secret_html = (
@@ -949,16 +944,6 @@ def render_specimens_tab(pov: str, mode: str):
                     f'</div>',
                     unsafe_allow_html=True
                 )
-
-    # BUG FIX: Use programmatic secret checking
-    revealed = try_reveal_secrets()
-    for secret in revealed:
-        st.markdown("---")
-        st.markdown(
-            f'<div class="secret-reveal"><strong>A pattern emerges...</strong>'
-            f'<br><br>{secret["content"]}</div>',
-            unsafe_allow_html=True
-        )
 
 
 def render_3d_theatre(mode: str, intensity: int):
