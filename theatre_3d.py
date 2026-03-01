@@ -97,7 +97,7 @@ canvas {{ display:block; width:100%!important; height:100%!important; }}
 <div id="whisper"></div>
 <div class="secret-found" id="secret-msg">SECRET DISCOVERED</div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r183/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.min.js"></script>
 <script>
 (function() {{
 'use strict';
