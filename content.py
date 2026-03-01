@@ -2,6 +2,9 @@
 The Anatomy Theatre — Content Module
 All narrative content, specimens, ambient text, and secrets.
 Tied to the world of The Crimson Rose series.
+
+BUG FIX: Removed mutable 'discovered' fields from SECRETS and SPECIMENS.
+Discovery state is now tracked exclusively in st.session_state.
 """
 
 import random
@@ -74,7 +77,7 @@ You are here to observe. Document. Understand.
 Nothing more.
         """
     },
-    
+
     "anatomist": {
         "gaslight": """
 The instruments are arranged. The subject is draped. The audience is — irrelevant. Background noise. Let them watch.
@@ -127,7 +130,7 @@ You smile for the audience.
         "clinical": """
 PRE-PROCEDURE CHECKLIST:
 - Instruments sterilized: CONFIRMED
-- Subject positioned: CONFIRMED  
+- Subject positioned: CONFIRMED
 - Drainage channels clear: CONFIRMED
 - Audience safety barriers in place: CONFIRMED
 - Documentation photographer present: CONFIRMED
@@ -152,7 +155,7 @@ You have done this 107 times.
 Begin.
         """
     },
-    
+
     "investigator": {
         "gaslight": """
 You shouldn't be here. Women aren't permitted in the main gallery — not officially — but the veil obscures your features and the borrowed mourning dress suggests a grief that grants access to places normally forbidden.
@@ -182,7 +185,7 @@ THE DEAD KNOW YOUR NAME.
 
 You feel their eyes — not the corpse on the table, but all of them. The ones who came before. The ones whose names fill your notebook in increasingly frantic handwriting. The ones who appeared on postcards before appearing on slabs.
 
-Mary. Catherine. Ellen. Jane. 
+Mary. Catherine. Ellen. Jane.
 
 *Their faces swim in your memory. Pretty faces. Trusting faces. Faces that didn't know they'd been photographed until it was far, far too late.*
 
@@ -210,7 +213,7 @@ Cover identity: Mourning widow, recently bereaved. Backstory memorized. Document
 
 OBJECTIVES:
 1. Identify Society members in attendance (look for: red rose pins, specific seating patterns, known associates)
-2. Document subject acquisition irregularities  
+2. Document subject acquisition irregularities
 3. Photograph any evidence of Fitzroy Protocol implementation
 4. Note exits, guard positions, potential extraction routes
 
@@ -227,7 +230,7 @@ NOTE TO SELF: The Black Book is here. Somewhere in this building. Find it.
 Proceeding with observation.
         """
     },
-    
+
     "subject": {
         "gaslight": """
 Cold.
@@ -242,7 +245,7 @@ You cannot remember. The laudanum took the memories first. Then the pain. Then t
 
 Now there is only cold.
 
-And light. Blinding, searing light from above, turning your closed eyelids red-gold like stained glass. 
+And light. Blinding, searing light from above, turning your closed eyelids red-gold like stained glass.
 
 And voices. So many voices. Murmuring. Laughing. Discussing you like you are a curiosity. A specimen. A thing.
 
@@ -320,35 +323,35 @@ I should never have
 # =============================================================================
 
 AMBIENT_SOUNDS = {
-    1: [  # Candlelit - calm
+    1: [
         "*The soft hiss of gaslight.*",
         "*Distant footsteps on stone.*",
         "*The rustle of fabric as someone shifts in their seat.*",
         "*A page turning in the gallery.*",
         "*The creak of aged wood.*",
     ],
-    2: [  # Uneasy
+    2: [
         "*A cough echoes. Then another.*",
         "*Somewhere, a door closes heavily.*",
         "*The scratch of pen on paper — frantic, hurried.*",
         "*A woman's sharp intake of breath.*",
         "*The gaslights flicker. Once. Twice.*",
     ],
-    3: [  # Tense
+    3: [
         "*A wet sound. Organic. Intimate.*",
         "*Someone whispers your name. No — not your name. Close, though.*",
         "*The unmistakable sound of metal parting flesh.*",
         "*A laugh from the upper gallery. Too loud. Too long.*",
         "*The drip of something into the drainage channel.*",
     ],
-    4: [  # Dread
+    4: [
         "*The gaslights dim without explanation.*",
         "*A child crying. But there are no children here. There shouldn't be.*",
         "*Your own heartbeat, deafening, drowning out everything else.*",
         "*The subject's hand twitches. The anatomist doesn't notice. You do.*",
         "*A voice in your ear: 'You're next.' But there's no one beside you.*",
     ],
-    5: [  # Visceral
+    5: [
         "*The lights die. In the darkness, something moves.*",
         "*Blood. You can smell it now. Fresh. Wrong.*",
         "*The subject sits up. Looks at you. Opens her mouth and—*",
@@ -467,6 +470,7 @@ ANATOMY_REGIONS = {
 
 # =============================================================================
 # SPECIMEN CABINET
+# BUG FIX: Removed 'discovered' field — tracked in session_state now
 # =============================================================================
 
 SPECIMENS = {
@@ -475,25 +479,21 @@ SPECIMENS = {
             "name": "Preserved Heart (Item 23-A)",
             "description": "A human heart suspended in pale yellow fluid. The label is handwritten: 'Female, approx. 25 years. Acquired: October 1887. Unusual coloration noted.'",
             "secret": "Hidden beneath the label, in different handwriting: 'Blood type matches S.C. — DO NOT DISCARD. Priority specimen for Protocol trials.'",
-            "discovered": False
         },
         {
             "name": "Collection of Infant Bones",
             "description": "A wooden box lined with velvet, containing the delicate bones of what must have been a very young child. The arrangement is almost artistic.",
             "secret": "The base of the box contains a false bottom. Beneath it: a receipt from 'Mrs. Mitchell's Baby Farm, Brixton.' The date matches the height of the mortality crisis.",
-            "discovered": False
         },
         {
             "name": "Brain in Spirits",
             "description": "A brain floating in preservation spirits, its wrinkles and folds clearly visible. A tag reads: 'Hysteria patient, Bethlem Hospital.'",
             "secret": "Pencil marks on the jar indicate measurement dates. The brain has been shrinking. The preservation fluid has been tampered with.",
-            "discovered": False
         },
         {
             "name": "Articulated Hand",
             "description": "A human hand, completely stripped of flesh, the bones wired together in perfect anatomical position. The fingertips show evidence of old scarring.",
             "secret": "The ring finger is missing. Removed post-mortem. A wedding band, perhaps? Kept as a trophy?",
-            "discovered": False
         }
     ],
     "documentary": [
@@ -501,25 +501,21 @@ SPECIMENS = {
             "name": "Black Book Fragment",
             "description": "A torn page of heavy paper, covered in dense handwriting. Names, dates, amounts. Some kind of ledger.",
             "secret": "Legible entries include: 'Fitzroy, A. — initiation complete, see Mentor Protocol' and 'Carlisle, S. — DEFECTED. Recovery priority alpha. Bounty authorized.'",
-            "discovered": False
         },
         {
             "name": "French Postcard (Damaged)",
             "description": "A photograph mounted on card, heavily water-damaged. The image is unclear but appears to show a woman in classical dress.",
             "secret": "Under magnification, the image is clearly a composite. The woman's face has been added to the body — different lighting, different grain. The photographer's mark is visible: 'T.B. Studio, Private Commission.'",
-            "discovered": False
         },
         {
             "name": "PWS Pamphlet",
             "description": "A cheaply printed pamphlet, its pages worn soft with handling. 'THE PROGRESSIVE WOMEN'S SOCIETY DEMANDS JUSTICE.'",
             "secret": "Handwritten in the margin: 'E.W. speaks at the Midnight Salon, Thursday. Bring evidence. Trust no one affiliated with Edinburgh.'",
-            "discovered": False
         },
         {
             "name": "Fitzroy Protocol Notes",
             "description": "Clinical notes on thick paper, detailing dosage schedules for something called 'Protocol Seven.'",
             "secret": "Marginal notation in red ink: 'Subject 12 showing unexpected consciousness during procedure. Increase paralytic. They must not move. They must not scream. They must not be perceived as human.'",
-            "discovered": False
         }
     ],
     "personal": [
@@ -527,25 +523,21 @@ SPECIMENS = {
             "name": "Tarnished Locket",
             "description": "A small silver locket, blackened with age. It refuses to open.",
             "secret": "When finally forced open, it contains a tiny photograph of a child and a lock of dark hair. On the back, barely legible: 'For my Mary. Until we meet again.'",
-            "discovered": False
         },
         {
             "name": "Child's Shoe",
             "description": "A single small shoe, sized for an infant. Well-made but heavily worn. Found among effects in the specimen room.",
             "secret": "Inside the shoe, a folded paper. A receipt from a Magdalene laundry: 'Child surrendered by mother, Catherine H. Care provided until placement.' No placement record exists.",
-            "discovered": False
         },
         {
             "name": "Romani Amulet",
             "description": "A small brass charm on a broken leather cord. The symbols are unfamiliar to conventional scholarship.",
             "secret": "This is a token of the Underground Network of Healers. Carrying it guarantees aid from any member. Its presence here means one of them was taken. The Network will want to know.",
-            "discovered": False
         },
         {
             "name": "Unsent Letter",
             "description": "A letter in elegant handwriting, folded but never sealed. It begins: 'Dearest Brother—'",
             "secret": "The letter is from Elijah Cartwright to his brother Alistair: 'I know what you have become. I know what the Society asks of you. There is still time, Alistair. There is still time to choose differently. Come to Tuck's Retreat. Let me help you find peace.' It was never sent.",
-            "discovered": False
         }
     ]
 }
@@ -553,44 +545,46 @@ SPECIMENS = {
 
 # =============================================================================
 # SECRETS AND HIDDEN CONTENT
+# BUG FIX: Removed 'discovered' field — tracked in session_state now
+# BUG FIX: Added 'condition' dict for programmatic trigger evaluation
 # =============================================================================
 
 SECRETS = [
     {
         "id": "red_rose_signal",
         "trigger": "Observe the gallery three times in Gothic mode",
+        "condition": {"pov": "observer", "mode": "gothic", "min_visits": 3},
         "content": "You finally understand the pattern. The men with red roses — they're not just watching. They're signaling. A touch to the brow: acquisition approved. A hand to the heart: payment confirmed. A rose lifted to the lips: target identified. You scan the gallery. Three roses at lips. All pointed toward living women.",
-        "discovered": False
     },
     {
         "id": "black_book_location",
         "trigger": "Investigate while at intensity 4+",
+        "condition": {"pov": "investigator", "min_intensity": 4},
         "content": "The Black Book. You've been looking in the wrong place. It's not in the preparation room — it's in plain sight. The anatomist's podium. The hollow space beneath the reading stand. You can see the edge of dark leather from here, if you know where to look.",
-        "discovered": False
     },
     {
         "id": "subject_identity",
         "trigger": "Examine the Subject's hands, then their eyes",
+        "condition": {"required_regions": ["hands", "eyes"]},
         "content": "You know her. God help you, you know her. Sarah Whitmore. Evelyn's cousin. The one who was supposed to have emigrated to America three weeks ago. The one whose letters suddenly stopped. The one who posed for a photograph at a society party, not knowing her image would be... manipulated. Sold. Used.",
-        "discovered": False
     },
     {
         "id": "anatomist_doubt",
         "trigger": "Play as Anatomist in Clinical mode",
+        "condition": {"pov": "anatomist", "mode": "clinical"},
         "content": "Your hands hesitate. For the first time in 108 procedures, your hands hesitate. This one— she has a birthmark. Left shoulder. Shaped like a crescent moon. Just like... No. Impossible. That was years ago. Edinburgh. A different life. A different you. ...Wasn't it?",
-        "discovered": False
     },
     {
         "id": "escape_route",
         "trigger": "Check all specimen categories",
+        "condition": {"all_categories_examined": True},
         "content": "The Romani amulet. The PWS pamphlet. The letter from Elijah. They form a network — a map, almost. The Underground Network of Healers. The Athena Rooms. Tuck's Retreat. These are the places they cannot reach. These are the places survivors run. If you ever need to disappear... now you know how.",
-        "discovered": False
     },
     {
         "id": "fitzroy_fear",
-        "trigger": "Read the brain specimen while at intensity 5",
+        "trigger": "Examine brain specimen while at intensity 5",
+        "condition": {"required_regions": ["brain"], "min_intensity": 5},
         "content": "You find a second label, hidden beneath the first. Different handwriting — shaky, hurried. 'Father's brain. Post-mortem examination reveals advanced deterioration consistent with senile dementia. The affliction is hereditary in 43% of cases.' Signed: A.F. Now you understand Alistair Fitzroy's obsession. He's not chasing immortality. He's running from his own mind.",
-        "discovered": False
     }
 ]
 
@@ -601,15 +595,15 @@ SECRETS = [
 
 EPIGRAPHS = [
     '"The theatre is full tonight. They have come to see inside the human form -- but it is their own interiors they will glimpse, reflected in the glass of the specimen jars."\n-- Unsigned, found in the margins of the Black Book',
-    
+
     '"We are all anatomists of a sort. Every glance dissects. Every judgment lays bare."\n-- Dr. Edmund Fitzroy, "On the Philosophy of Medical Practice"',
-    
+
     '"They tell us the dead feel nothing. They tell us this so we may continue."\n-- Progressive Women\'s Society pamphlet, 1886',
-    
+
     '"The table does not discriminate. Lord or beggar, virgin or whore -- beneath the blade, we are all merely meat awaiting meaning."\n-- Anatomy Club initiation text',
-    
+
     '"I have held hearts that still dreamed of beating."\n-- Attributed to Sebastian Carlisle, unconfirmed',
-    
+
     '"What is a body? A vessel. A vehicle. A temple. A prison. A library of secrets written in blood and bone. We read what we can and burn the rest."\n-- Alistair Fitzroy, private correspondence',
 ]
 
@@ -636,15 +630,8 @@ def get_ambient_observation(pov: str) -> str:
 
 
 def get_anatomy_text(region: str, layer: str, pov: str = "observer") -> str:
-    """Get text for an anatomy region.
-    
-    Args:
-        region: The body region (heart, brain, etc.)
-        layer: The content layer (medical, lore, emotional)
-        pov: The current perspective (for emotional layer)
-    """
+    """Get text for an anatomy region."""
     region_data = ANATOMY_REGIONS.get(region, ANATOMY_REGIONS["heart"])
-    
     if layer == "emotional":
         return region_data["emotional"].get(pov, region_data["emotional"]["observer"])
     else:
@@ -659,3 +646,46 @@ def get_random_epigraph() -> str:
 def get_specimens_by_category(category: str) -> list:
     """Get all specimens in a category."""
     return SPECIMENS.get(category, [])
+
+
+def check_secret_condition(secret: dict, pov: str, mode: str, intensity: int,
+                           examined_regions: list, examined_specimens: list,
+                           visit_count: int) -> bool:
+    """
+    Programmatically evaluate whether a secret's condition is met.
+    Returns True if the secret should be revealed.
+    """
+    cond = secret.get("condition", {})
+
+    # Check POV requirement
+    if "pov" in cond and cond["pov"] != pov:
+        return False
+
+    # Check mode requirement
+    if "mode" in cond and cond["mode"] != mode:
+        return False
+
+    # Check minimum intensity
+    if "min_intensity" in cond and intensity < cond["min_intensity"]:
+        return False
+
+    # Check minimum visits
+    if "min_visits" in cond and visit_count < cond["min_visits"]:
+        return False
+
+    # Check required anatomy regions
+    if "required_regions" in cond:
+        if not all(r in examined_regions for r in cond["required_regions"]):
+            return False
+
+    # Check all specimen categories examined
+    if cond.get("all_categories_examined"):
+        categories = ["anatomical", "documentary", "personal"]
+        all_checked = all(
+            any(f"{cat}_" in s for s in examined_specimens)
+            for cat in categories
+        )
+        if not all_checked:
+            return False
+
+    return True
