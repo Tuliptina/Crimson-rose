@@ -5,8 +5,8 @@ Fully immersive Three.js Victorian anatomy theatre.
 UPDATES IMPLEMENTED:
 - Upgraded to Three.js r183
 - Integrated ACESFilmicToneMapping for modern sRGB color space management
-- Calibrated all PointLight, SpotLight, and DirectionalLight intensities for physically based lighting (inverse-square decay)
-- Adjusted animation loop flicker math to match physical light scales
+- FIXED: Calibrated PointLight, SpotLight, and Ambient intensities to true physical values (candelas)
+- FIXED: Removed artificial distance cutoffs on PointLights so they naturally decay across the room
 """
 
 def get_theatre_3d(mode: str = "gaslight", intensity: int = 3) -> str:
@@ -132,7 +132,7 @@ renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
 // Tone mapping for modern color space lighting
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.0;
+renderer.toneMappingExposure = 1.2; // Bumped exposure slightly to ensure visibility
 container.appendChild(renderer.domElement);
 
 const raycaster = new THREE.Raycaster();
@@ -149,17 +149,20 @@ const spectatorMat = new THREE.MeshLambertMaterial({{ color:{hx(c["spectator_col
 const roseMat = new THREE.MeshBasicMaterial({{ color:{hx(c["rose_color"])}, transparent:true, opacity:0.9 }});
 const bloodMat = new THREE.MeshBasicMaterial({{ color:{hx(c["blood_color"])}, transparent:true, opacity:0.6 }});
 
-// ---------- Lighting (Scaled for Physical Based Lighting) ----------
-scene.add(new THREE.AmbientLight(0xffffff, 0.3));
-scene.add(new THREE.HemisphereLight(0xffffff, {hx(c["wood_dark"])}, 0.5));
+// ---------- Physical Lighting Scaled ----------
+// Ambient & Hemisphere lights provide base visibility so shadows aren't pitch black
+scene.add(new THREE.AmbientLight(0xffffff, 2.5));
+scene.add(new THREE.HemisphereLight(0xffffff, {hx(c["wood_dark"])}, 3.0));
 
-const dirLight = new THREE.DirectionalLight({hx(c["light_color"])}, 2.5);
+// Directional Light acting as strong moonlight / ambient fill
+const dirLight = new THREE.DirectionalLight({hx(c["light_color"])}, 15.0);
 dirLight.position.set(10, 25, 10);
 dirLight.castShadow = true;
 dirLight.shadow.mapSize.set(1024, 1024);
 scene.add(dirLight);
 
-const spotlight = new THREE.SpotLight({hx(c["light_color"])}, {c["light_intensity"]*25});
+// Spotlight over the table
+const spotlight = new THREE.SpotLight({hx(c["light_color"])}, {c["light_intensity"]*150});
 spotlight.position.set(0, 12, 0);
 spotlight.angle = Math.PI/5;
 spotlight.penumbra = 0.4;
@@ -364,7 +367,8 @@ for (let i = 0; i < 12; i++) {{
     flame.position.set(Math.cos(angle) * radius, 0.28, Math.sin(angle) * radius);
     chandelier.add(flame);
 
-    const cLight = new THREE.PointLight({hx(c["light_color"])}, 10.0, 8);
+    // FIXED: Intensity set to 150 candelas, distance 0 (infinite natural decay)
+    const cLight = new THREE.PointLight({hx(c["light_color"])}, 150.0, 0);
     cLight.position.copy(flame.position);
     chandelier.add(cLight);
     chandelierLights.push(cLight);
@@ -524,7 +528,8 @@ for (let tier = 0; tier < 3; tier++) {{
             cb.add(flame);
         }}
 
-        const cLight = new THREE.PointLight({hx(c["light_color"])}, 5.0, 4);
+        // FIXED: Intensity set to 100 candelas, distance 0
+        const cLight = new THREE.PointLight({hx(c["light_color"])}, 100.0, 0);
         cLight.position.y = 0.32;
         cb.add(cLight);
         candelabras.push(cLight);
@@ -866,7 +871,8 @@ for (let i = 0; i < 10; i++) {{
     fixture.position.set(Math.cos(angle) * outerRadius, tierCount * tierHeight + 0.5, Math.sin(angle) * outerRadius);
     scene.add(fixture);
 
-    const light = new THREE.PointLight({hx(c["light_color"])}, {c["light_intensity"]*15.0}, 14);
+    // FIXED: Intensity set to 300 candelas, distance 0
+    const light = new THREE.PointLight({hx(c["light_color"])}, {c["light_intensity"]*200.0}, 0);
     light.position.copy(fixture.position);
     light.position.y -= 0.25;
     scene.add(light);
@@ -1160,10 +1166,10 @@ function animate() {{
     requestAnimationFrame(animate);
     const t = clock2.getElapsedTime();
 
-    // Flicker lights (Calibrated for r183 light intensity values)
+    // Flicker lights (Calibrated)
     gaslights.forEach((light, i) => {{
         const f = Math.sin(t*15+i*2.5)*{flicker_intensity} + Math.sin(t*31+i*4)*{flicker_intensity*0.5};
-        light.intensity = {c["light_intensity"]*15.0}*(1+f);
+        light.intensity = {c["light_intensity"]*200.0}*(1+f);
         if(glowMeshes[i]) glowMeshes[i].material.opacity = 0.7+f*0.3;
     }});
 
@@ -1171,12 +1177,12 @@ function animate() {{
     chandelier.rotation.x = Math.sin(t*0.5)*0.015;
     chandelier.rotation.z = Math.cos(t*0.3)*0.01;
     chandelierLights.forEach((cl, i) => {{
-        cl.intensity = 10.0 + Math.sin(t*12+i*3)*3.0;
+        cl.intensity = 150.0 + Math.sin(t*12+i*3)*30.0;
     }});
 
     // Candelabra flicker
     candelabras.forEach((cl, i) => {{
-        cl.intensity = 5.0 + Math.sin(t*8+i*5)*1.5;
+        cl.intensity = 100.0 + Math.sin(t*8+i*5)*20.0;
     }});
 
     // Pendulum
