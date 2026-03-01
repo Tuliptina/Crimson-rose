@@ -1177,7 +1177,7 @@ function showDetail(data) {{
     startLiquidAnim();
 }}
 
-function closeDetail() {{
+window.closeDetail = function() {{
     detailOverlay.classList.remove('active');
     currentBottleData = null;
     if (liquidAnimFrame) cancelAnimationFrame(liquidAnimFrame);
