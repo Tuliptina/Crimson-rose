@@ -3,10 +3,9 @@
 Fully immersive Three.js Victorian anatomy theatre.
 
 UPDATES IMPLEMENTED:
-- PBR (Physically Based Rendering) Materials: Added metallic and roughness maps for realistic brass, wood, and cloth.
-- Chiaroscuro Lighting: Implemented cool/blue ambient moonlight contrasted with intense warm/orange focal lights.
-- Cinematic Falloff: Configured lights to create isolated "pools" of gaslight using controlled distance and linear decay.
-- Enhanced fog for a thicker, smoggy London atmosphere.
+- Brighter Camera Exposure (ToneMapping bumped to 1.8).
+- Increased Ambient and Directional skylight intensities to prevent crushed blacks.
+- Boosted Spotlight and PointLight intensities to maintain vibrant contrast.
 """
 
 def get_theatre_3d(mode: str = "gaslight", intensity: int = 3) -> str:
@@ -132,20 +131,19 @@ renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
-// Richer, moodier tone mapping
+// INCREASED EXPOSURE: Brightens the whole scene significantly without washing out colors
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.0; 
+renderer.toneMappingExposure = 1.8; 
 container.appendChild(renderer.domElement);
 
 const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
 
-// ---------- PBR Materials (Highly Realistic) ----------
-// Roughness and metalness values give realistic glints and dullness
+// ---------- PBR Materials ----------
 
 const woodMat = new THREE.MeshStandardMaterial({{ color:{hx(c["wood"])}, roughness: 0.85, metalness: 0.1 }});
 const darkWoodMat = new THREE.MeshStandardMaterial({{ color:{hx(c["wood_dark"])}, roughness: 0.95, metalness: 0.05 }});
-const metalMat = new THREE.MeshStandardMaterial({{ color:{hx(c["metal"])}, roughness: 0.35, metalness: 0.85 }}); // High shine for brass/iron
+const metalMat = new THREE.MeshStandardMaterial({{ color:{hx(c["metal"])}, roughness: 0.35, metalness: 0.85 }});
 const clothMat = new THREE.MeshStandardMaterial({{ color:{hx(c["cloth"])}, roughness: 1.0, side:THREE.DoubleSide }});
 const skinMat = new THREE.MeshStandardMaterial({{ color:{hx(c["skin"])}, roughness: 0.6, metalness: 0.1 }});
 const stoneMat = new THREE.MeshStandardMaterial({{ color:{hx(c["stone"])}, roughness: 0.9, metalness: 0.0 }});
@@ -153,13 +151,13 @@ const spectatorMat = new THREE.MeshStandardMaterial({{ color:{hx(c["spectator_co
 const roseMat = new THREE.MeshStandardMaterial({{ color:{hx(c["rose_color"])}, roughness: 0.4, metalness: 0.2 }});
 const bloodMat = new THREE.MeshStandardMaterial({{ color:{hx(c["blood_color"])}, roughness: 0.2, metalness: 0.1, transparent:true, opacity:0.8 }});
 
-// ---------- Cinematic Chiaroscuro Lighting ----------
+// ---------- Cinematic Chiaroscuro Lighting (BOOSTED) ----------
 
-// 1. Cool Ambient Fill (Simulates night sky / gloomy shadows)
-scene.add(new THREE.AmbientLight({hx(c["ambient"])}, {c["light_intensity"] * 0.8}));
+// 1. Cool Ambient Fill (Boosted from 0.8 to 1.5 to lift crushed blacks)
+scene.add(new THREE.AmbientLight({hx(c["ambient"])}, {c["light_intensity"] * 1.5}));
 
-// 2. The Architectural Skylight (Dim moonlight through the dome)
-const skylight = new THREE.DirectionalLight({hx(c["ambient"])}, {c["light_intensity"] * 1.5});
+// 2. The Architectural Skylight (Boosted from 1.5 to 2.5 to illuminate the room structure better)
+const skylight = new THREE.DirectionalLight({hx(c["ambient"])}, {c["light_intensity"] * 2.5});
 skylight.position.set(5, 40, 5); 
 skylight.target.position.set(0, 0, 0);
 skylight.castShadow = true;
@@ -175,9 +173,8 @@ skylight.shadow.bias = -0.002;
 scene.add(skylight);
 scene.add(skylight.target);
 
-// 3. The Surgical Focus Light (Warm, intense beam on the table)
-// Using cinematic decay: SpotLight(color, intensity, distance, angle, penumbra, decay)
-const spotlight = new THREE.SpotLight({hx(c["light_color"])}, {c["light_intensity"] * 15.0}, 30, Math.PI/5, 0.8, 1);
+// 3. The Surgical Focus Light (Boosted from 15 to 25 for a striking focal point)
+const spotlight = new THREE.SpotLight({hx(c["light_color"])}, {c["light_intensity"] * 25.0}, 30, Math.PI/5, 0.8, 1);
 spotlight.position.set(0, 15, 0);
 spotlight.target.position.set(0, 0, 0);
 spotlight.castShadow = true;
@@ -384,8 +381,8 @@ for (let i = 0; i < 12; i++) {{
     flame.position.set(Math.cos(angle) * radius, 0.28, Math.sin(angle) * radius);
     chandelier.add(flame);
 
-    // Cinematic falloff: PointLight(color, intensity, distance, decay)
-    const cLight = new THREE.PointLight({hx(c["light_color"])}, {c["light_intensity"]*3.0}, 8.0, 1.0);
+    // Boosted Chandelier Local Light
+    const cLight = new THREE.PointLight({hx(c["light_color"])}, {c["light_intensity"]*5.0}, 10.0, 1.0);
     cLight.position.copy(flame.position);
     chandelier.add(cLight);
     chandelierLights.push(cLight);
@@ -530,8 +527,8 @@ for (let tier = 0; tier < 3; tier++) {{
             cb.add(flame);
         }}
 
-        // Creates small local pools of light along the gallery
-        const cLight = new THREE.PointLight({hx(c["light_color"])}, {c["light_intensity"]*2.0}, 6.0, 1.0);
+        // Boosted Candelabra Lights
+        const cLight = new THREE.PointLight({hx(c["light_color"])}, {c["light_intensity"]*3.0}, 8.0, 1.0);
         cLight.position.y = 0.32;
         cb.add(cLight);
         candelabras.push(cLight);
@@ -588,7 +585,7 @@ clock.rotation.y = -Math.PI / 3;
 scene.add(clock);
 clickableObjects.push(clock);
 
-// Dissection Table (Highly metallic in PBR)
+// Dissection Table 
 const tableGroup = new THREE.Group();
 tableGroup.userData = {{ type:'table', title:'The Dissection Table', desc:'Cold metal. Drainage channels. The subject waits.', lore:'How many have lain here before?' }};
 
@@ -861,8 +858,8 @@ for (let i = 0; i < 10; i++) {{
     fixture.position.set(Math.cos(angle) * outerRadius, tierCount * tierHeight + 0.5, Math.sin(angle) * outerRadius);
     scene.add(fixture);
 
-    // Cinematic falloff: PointLight(color, intensity, distance, decay)
-    const light = new THREE.PointLight({hx(c["light_color"])}, {c["light_intensity"]*8.0}, 15.0, 1.0);
+    // Boosted Gaslight local lighting
+    const light = new THREE.PointLight({hx(c["light_color"])}, {c["light_intensity"]*12.0}, 20.0, 1.0);
     light.position.copy(fixture.position);
     light.position.y -= 0.25;
     scene.add(light);
@@ -1157,18 +1154,19 @@ function animate() {{
     requestAnimationFrame(animate);
     const t = clock2.getElapsedTime();
 
+    // Adjusted flicker to match new higher light base values
     gaslights.forEach((light, i) => {{
         const f = Math.sin(t*15+i*2.5)*{flicker_intensity} + Math.sin(t*31+i*4)*{flicker_intensity*0.5};
-        light.intensity = {c["light_intensity"]*8.0}*(1+f);
+        light.intensity = {c["light_intensity"]*12.0}*(1+f);
         if(glowMeshes[i]) glowMeshes[i].material.opacity = 0.7+f*0.3;
     }});
 
     chandelierLights.forEach((cl, i) => {{
-        cl.intensity = {c["light_intensity"]*3.0} + Math.sin(t*12+i*3)*1.0;
+        cl.intensity = {c["light_intensity"]*5.0} + Math.sin(t*12+i*3)*1.5;
     }});
 
     candelabras.forEach((cl, i) => {{
-        cl.intensity = {c["light_intensity"]*2.0} + Math.sin(t*8+i*5)*0.8;
+        cl.intensity = {c["light_intensity"]*3.0} + Math.sin(t*8+i*5)*1.0;
     }});
 
     // Pendulum
