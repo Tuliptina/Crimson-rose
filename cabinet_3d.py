@@ -405,7 +405,7 @@ BOTTLES.forEach(b => {{
 }});
 
 // Camera controls
-let drag=false, px=0, py=0, theta=0, phi=1.2, dist=6;
+let isDown=false, hasMoved=false, px=0, py=0, theta=0, phi=1.2, dist=6;
 const target = new THREE.Vector3(0, 1.3, 0);
 
 function updateCam() {{
@@ -415,16 +415,20 @@ function updateCam() {{
     camera.lookAt(target);
 }}
 
-renderer.domElement.onmousedown = e => {{ drag=true; px=e.clientX; py=e.clientY; }};
-window.onmouseup = () => drag=false;
+renderer.domElement.onmousedown = e => {{ isDown=true; hasMoved=false; px=e.clientX; py=e.clientY; }};
+window.onmouseup = () => {{ isDown=false; }};
 renderer.domElement.onmousemove = e => {{
     mouse.x = (e.clientX/window.innerWidth)*2-1;
     mouse.y = -(e.clientY/window.innerHeight)*2+1;
-    if(drag) {{
-        theta += (e.clientX-px)*0.005;
-        phi = Math.max(0.5, Math.min(1.5, phi+(e.clientY-py)*0.005));
-        px=e.clientX; py=e.clientY;
-        updateCam();
+    if(isDown) {{
+        const dx = e.clientX-px, dy = e.clientY-py;
+        if(Math.abs(dx)>3 || Math.abs(dy)>3) hasMoved=true;
+        if(hasMoved) {{
+            theta += dx*0.005;
+            phi = Math.max(0.5, Math.min(1.5, phi+dy*0.005));
+            px=e.clientX; py=e.clientY;
+            updateCam();
+        }}
     }}
 }};
 renderer.domElement.onwheel = e => {{
@@ -829,7 +833,7 @@ function checkHidden() {{
 
 // Click handler
 renderer.domElement.onclick = e => {{
-    if(drag) return;
+    if(hasMoved) return;
     const cm = new THREE.Vector2((e.clientX/window.innerWidth)*2-1, -(e.clientY/window.innerHeight)*2+1);
     raycaster.setFromCamera(cm, camera);
     
