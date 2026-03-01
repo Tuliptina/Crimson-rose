@@ -20,16 +20,6 @@ A full Three.js scene with orbit controls, clickable objects, and atmospheric ef
 - Rats, ravens, blood stains, and a second stretcher — all scaling with intensity
 - Hidden red roses to discover
 
-### 3D Apothecary Cabinet (The Fitzroy Collection)
-An interactive Victorian medical cabinet with UV blacklight mode:
-- 15 labelled bottles with lore (Laudanum, Vita Aeterna, Strychnine, and more)
-- Human skull, dripping candle, leather-bound books
-- Brass balance scales, mortar & pestle, Victorian syringe
-- Magnifying glass, pocket watch, wax seal stamps
-- Cobwebs, dust particles, dried herbs, chemical stains
-- Mouse peeking out at higher intensities
-- UV mode reveals hidden text and messages on the back wall
-
 ### Narrative System
 - **4 POVs**: Observer, Anatomist, Investigator, Subject — each with unique openings and observations
 - **3 Visual Modes**: Gaslight (warm amber), Gothic (crimson horror), Clinical (sterile white)
@@ -49,7 +39,6 @@ Interactive body region selector with three content layers per region:
 ├── app.py            # Main Streamlit application (UI, routing, state management)
 ├── content.py        # All narrative content, specimens, secrets, and helper functions
 ├── theatre_3d.py     # 3D anatomy theatre (Three.js r128)
-├── cabinet_3d.py     # 3D apothecary cabinet (Three.js r128)
 ├── requirements.txt  # Python dependencies
 └── README.md
 ```
