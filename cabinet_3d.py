@@ -367,6 +367,14 @@ function slotPos(row, slot) {{
 BOTTLES.forEach(b => {{
     const g = new THREE.Group();
     
+    // Invisible hitbox for easier clicking
+    const hitbox = new THREE.Mesh(
+        new THREE.BoxGeometry(0.22, 0.4, 0.22),
+        new THREE.MeshBasicMaterial({{ visible: false }})
+    );
+    hitbox.userData = {{ bottleRef: b }};
+    g.add(hitbox);
+    
     const glass = new THREE.Mesh(
         new THREE.CylinderGeometry(0.08, 0.09, 0.32, 12),
         new THREE.MeshLambertMaterial({{ color:b.color, transparent:true, opacity:0.6 }})
@@ -379,7 +387,6 @@ BOTTLES.forEach(b => {{
         new THREE.MeshLambertMaterial({{ color:b.liquid, transparent:true, opacity:0.85 }})
     );
     liq.position.y = -0.14 + lh/2 + 0.02;
-    liq.userData = {{ isLiquid: true }};
     g.add(liq);
     
     const cork = new THREE.Mesh(
@@ -841,12 +848,23 @@ renderer.domElement.onclick = e => {{
     const backHit = raycaster.intersectObject(back);
     if(backHit.length > 0) {{ checkHidden(); return; }}
     
-    // Check bottles
+    // Check bottles - look for bottleRef or id in userData
     const hits = raycaster.intersectObjects(bottles, true);
     if(hits.length) {{
         let o = hits[0].object;
-        while(o && !o.userData.id) o = o.parent;
-        if(o) showZoom(o.userData);
+        // Check if hit object has bottleRef (hitbox)
+        if(o.userData.bottleRef) {{
+            showZoom(o.userData.bottleRef);
+            return;
+        }}
+        // Otherwise traverse up to find parent with id
+        while(o) {{
+            if(o.userData && o.userData.id) {{
+                showZoom(o.userData);
+                return;
+            }}
+            o = o.parent;
+        }}
     }}
 }};
 
@@ -856,38 +874,63 @@ function animate() {{
     requestAnimationFrame(animate);
     const t = clock.getElapsedTime();
     
-    // Hover
+    // Hover detection
     raycaster.setFromCamera(mouse, camera);
     const hits = raycaster.intersectObjects(bottles, true);
-    bottles.forEach(b => b.children[0].material.emissive = new THREE.Color(0));
+    bottles.forEach(b => {{
+        // Reset emissive on glass (child index 1 now due to hitbox)
+        if(b.children[1]) b.children[1].material.emissive = new THREE.Color(0);
+    }});
     
     const hint = document.getElementById('hint');
     if(hits.length && !zoomPanel.classList.contains('show')) {{
+        let hitData = null;
         let o = hits[0].object;
-        while(o && !o.userData.id) o = o.parent;
-        if(o) {{
-            o.children[0].material.emissive = new THREE.Color({light});
-            o.children[0].material.emissiveIntensity = uvMode ? 0.4 : 0.2;
-            hint.textContent = o.userData.name;
+        
+        // Check for bottleRef (hitbox)
+        if(o.userData.bottleRef) {{
+            hitData = o.userData.bottleRef;
+        }} else {{
+            // Traverse up to find parent with id
+            while(o) {{
+                if(o.userData && o.userData.id) {{
+                    hitData = o.userData;
+                    break;
+                }}
+                o = o.parent;
+            }}
+        }}
+        
+        if(hitData) {{
+            // Find the bottle group and highlight glass
+            const bottleGroup = bottles.find(b => b.userData.id === hitData.id);
+            if(bottleGroup && bottleGroup.children[1]) {{
+                bottleGroup.children[1].material.emissive = new THREE.Color({light});
+                bottleGroup.children[1].material.emissiveIntensity = uvMode ? 0.4 : 0.2;
+            }}
+            hint.textContent = hitData.name;
             hint.style.opacity = 1;
         }}
-    }} else if(!zoomPanel.classList.contains('show')) hint.style.opacity = 0;
+    }} else if(!zoomPanel.classList.contains('show')) {{
+        hint.style.opacity = 0;
+    }}
     
     // Bottle animations (3D)
     bottles.forEach(b => {{
-        if(b.userData.special === 'swirl') {{
-            b.children[1].rotation.y = t * 0.5;
+        // Glass is now child[1], liquid is child[2] (hitbox is child[0])
+        if(b.userData.special === 'swirl' && b.children[2]) {{
+            b.children[2].rotation.y = t * 0.5;
         }}
-        if(b.userData.special === 'leeches') {{
-            b.children[1].scale.y = 1 + Math.sin(t*2)*0.05;
+        if(b.userData.special === 'leeches' && b.children[2]) {{
+            b.children[2].scale.y = 1 + Math.sin(t*2)*0.05;
         }}
-        if(b.userData.anim === 'pulse') {{
-            b.children[0].material.opacity = 0.5 + Math.sin(t*3)*0.15;
+        if(b.userData.anim === 'pulse' && b.children[1]) {{
+            b.children[1].material.opacity = 0.5 + Math.sin(t*3)*0.15;
         }}
         // UV glow
-        if(uvMode && b.userData.uv) {{
-            b.children[0].material.emissive = new THREE.Color(0x440066);
-            b.children[0].material.emissiveIntensity = 0.3 + Math.sin(t*4)*0.1;
+        if(uvMode && b.userData.uv && b.children[1]) {{
+            b.children[1].material.emissive = new THREE.Color(0x440066);
+            b.children[1].material.emissiveIntensity = 0.3 + Math.sin(t*4)*0.1;
         }}
     }});
     
