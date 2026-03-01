@@ -4,9 +4,8 @@ Fully immersive Three.js Victorian anatomy theatre.
 
 UPDATES IMPLEMENTED:
 - Upgraded to Three.js r183 with ACESFilmicToneMapping.
-- Replaced point-light dependency with a Victorian "Skylight" (DirectionalLight) and Hemisphere bounce light to overcome physical inverse-square decay.
-- Tuned local gaslights, candelabras, and chandeliers with high physical candela values.
-- Moved camera spawn inside the structural wall radius.
+- BYPASSED strict physical lighting decay by explicitly setting PointLight and SpotLight decay to 0.
+- Restored artistic, manageable light intensity values (no need for millions of candelas).
 """
 
 def get_theatre_3d(mode: str = "gaslight", intensity: int = 3) -> str:
@@ -121,7 +120,7 @@ scene.background = new THREE.Color({hx(c["background"])});
 scene.fog = new THREE.FogExp2({hx(c["fog_color"])}, {0.008 * fog_density});
 
 const camera = new THREE.PerspectiveCamera(55, W/H, 0.1, 1000);
-// Spawn inside the room radius to prevent wall shadow clipping
+// Spawning inside the room radius to prevent clipping
 camera.position.set(12, 8, 12);
 camera.lookAt(0, 2, 0);
 
@@ -131,9 +130,9 @@ renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
-// Tone mapping for modern color space lighting
+// Tone mapping configured for Standard brightness
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 2.0;
+renderer.toneMappingExposure = 1.2;
 container.appendChild(renderer.domElement);
 
 const raycaster = new THREE.Raycaster();
@@ -150,16 +149,15 @@ const spectatorMat = new THREE.MeshLambertMaterial({{ color:{hx(c["spectator_col
 const roseMat = new THREE.MeshBasicMaterial({{ color:{hx(c["rose_color"])}, transparent:true, opacity:0.9 }});
 const bloodMat = new THREE.MeshBasicMaterial({{ color:{hx(c["blood_color"])}, transparent:true, opacity:0.6 }});
 
-// ---------- Lighting (Victorian Skylight Approach) ----------
+// ---------- Non-Decaying Lighting Setup (Safely overrides r183 darkness) ----------
 
-// 1. Hemisphere Light (Simulates light scattering in the room off walls and floor)
+// 1. Hemisphere Bounce Light
 const hemiColor = MODE === 'clinical' ? 0xffffff : 0x445566;
-const hemiIntensity = {c["light_intensity"] * 10.0};
-const hemiLight = new THREE.HemisphereLight(hemiColor, {hx(c["wood_dark"])}, hemiIntensity);
+const hemiLight = new THREE.HemisphereLight(hemiColor, {hx(c["wood_dark"])}, {c["light_intensity"] * 2.0});
 scene.add(hemiLight);
 
-// 2. The Architectural Skylight (Soft, massive top-down light simulating the glass dome)
-const skylight = new THREE.DirectionalLight({hx(c["light_color"])}, {c["light_intensity"] * 10.0});
+// 2. The Architectural Skylight (DirectionalLight does not decay by default)
+const skylight = new THREE.DirectionalLight({hx(c["light_color"])}, {c["light_intensity"] * 2.5});
 skylight.position.set(0, 40, 0); 
 skylight.target.position.set(0, 0, 0);
 skylight.castShadow = true;
@@ -175,15 +173,16 @@ skylight.shadow.bias = -0.001;
 scene.add(skylight);
 scene.add(skylight.target);
 
-// 3. The Surgical Focus Light (Argand Lamp equivalent focusing on the table)
-const spotlight = new THREE.SpotLight({hx(c["light_color"])}, {c["light_intensity"] * 4000.0}, 0, Math.PI/6, 0.5, 1.5);
+// 3. The Surgical Focus Light
+// Signature: SpotLight(color, intensity, distance, angle, penumbra, DECAY)
+// Setting decay to 0 bypasses physical limitations!
+const spotlight = new THREE.SpotLight({hx(c["light_color"])}, {c["light_intensity"] * 8.0}, 0, Math.PI/6, 0.5, 0);
 spotlight.position.set(0, 15, 0);
 spotlight.target.position.set(0, 0, 0);
 spotlight.castShadow = true;
 scene.add(spotlight);
 scene.add(spotlight.target);
 
-// Low base ambient to ensure no pitch-black pixels
 scene.add(new THREE.AmbientLight(0xffffff, 0.5));
 
 // ---------- Constants ----------
@@ -384,7 +383,8 @@ for (let i = 0; i < 12; i++) {{
     flame.position.set(Math.cos(angle) * radius, 0.28, Math.sin(angle) * radius);
     chandelier.add(flame);
 
-    const cLight = new THREE.PointLight({hx(c["light_color"])}, {c["light_intensity"]*150.0}, 0, 2);
+    // Signature: PointLight(color, intensity, distance, DECAY)
+    const cLight = new THREE.PointLight({hx(c["light_color"])}, {c["light_intensity"]*2.0}, 0, 0);
     cLight.position.copy(flame.position);
     chandelier.add(cLight);
     chandelierLights.push(cLight);
@@ -544,7 +544,7 @@ for (let tier = 0; tier < 3; tier++) {{
             cb.add(flame);
         }}
 
-        const cLight = new THREE.PointLight({hx(c["light_color"])}, {c["light_intensity"]*80.0}, 0, 2);
+        const cLight = new THREE.PointLight({hx(c["light_color"])}, {c["light_intensity"]*1.5}, 0, 0);
         cLight.position.y = 0.32;
         cb.add(cLight);
         candelabras.push(cLight);
@@ -886,7 +886,7 @@ for (let i = 0; i < 10; i++) {{
     fixture.position.set(Math.cos(angle) * outerRadius, tierCount * tierHeight + 0.5, Math.sin(angle) * outerRadius);
     scene.add(fixture);
 
-    const light = new THREE.PointLight({hx(c["light_color"])}, {c["light_intensity"]*800.0}, 0, 2);
+    const light = new THREE.PointLight({hx(c["light_color"])}, {c["light_intensity"]*5.0}, 0, 0);
     light.position.copy(fixture.position);
     light.position.y -= 0.25;
     scene.add(light);
@@ -1035,7 +1035,6 @@ if (MODE !== 'clinical') {{
 // ---------- Camera Controls ----------
 let isDragging = false;
 let prevMouse = {{x:0, y:0}};
-// Adjusted spherical to match new inside-radius camera origin
 let spherical = {{radius:14, theta:Math.PI/4, phi:Math.PI/3}};
 
 function updateCamera() {{
@@ -1181,19 +1180,19 @@ function animate() {{
     requestAnimationFrame(animate);
     const t = clock2.getElapsedTime();
 
-    // Gaslight flicker logic with physical base
+    // Gaslight flicker logic with stable modifiers
     gaslights.forEach((light, i) => {{
         const f = Math.sin(t*15+i*2.5)*{flicker_intensity} + Math.sin(t*31+i*4)*{flicker_intensity*0.5};
-        light.intensity = {c["light_intensity"]*800.0}*(1+f);
+        light.intensity = {c["light_intensity"]*5.0}*(1+f);
         if(glowMeshes[i]) glowMeshes[i].material.opacity = 0.7+f*0.3;
     }});
 
     chandelierLights.forEach((cl, i) => {{
-        cl.intensity = {c["light_intensity"]*150.0} + Math.sin(t*12+i*3)*40.0;
+        cl.intensity = {c["light_intensity"]*2.0} + Math.sin(t*12+i*3)*0.5;
     }});
 
     candelabras.forEach((cl, i) => {{
-        cl.intensity = {c["light_intensity"]*80.0} + Math.sin(t*8+i*5)*20.0;
+        cl.intensity = {c["light_intensity"]*1.5} + Math.sin(t*8+i*5)*0.3;
     }});
 
     // Pendulum
