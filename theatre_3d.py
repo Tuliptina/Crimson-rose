@@ -3,10 +3,9 @@
 Fully immersive Three.js Victorian anatomy theatre.
 
 UPDATES IMPLEMENTED:
-- Upgraded to Three.js r183
-- Integrated ACESFilmicToneMapping for modern sRGB color space management
-- FIXED: Calibrated PointLight, SpotLight, and Ambient intensities to true physical values (candelas)
-- FIXED: Removed artificial distance cutoffs on PointLights so they naturally decay across the room
+- PBR Lighting Calibration: Pumped PointLights to 5000+ candelas to overcome realistic inverse-square decay.
+- Camera Exposure: Increased ACESFilmic Tone Mapping exposure to 2.5.
+- Camera Positioning: Moved the starting camera coordinates inside the theatre's physical wall radius to prevent shadow/culling artifacts in r183.
 """
 
 def get_theatre_3d(mode: str = "gaslight", intensity: int = 3) -> str:
@@ -118,10 +117,11 @@ const H = container.clientHeight || window.innerHeight;
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color({hx(c["background"])});
-scene.fog = new THREE.FogExp2({hx(c["fog_color"])}, {0.012 * fog_density});
+scene.fog = new THREE.FogExp2({hx(c["fog_color"])}, {0.008 * fog_density}); // Reduced fog density slightly to prevent physical light washing out
 
 const camera = new THREE.PerspectiveCamera(55, W/H, 0.1, 1000);
-camera.position.set(18, 12, 18);
+// FIXED: Moved camera closer (radius ~15) so it starts INSIDE the cylinder walls (radius 18)
+camera.position.set(10, 8, 10);
 camera.lookAt(0, 2, 0);
 
 const renderer = new THREE.WebGLRenderer({{ antialias:true }});
@@ -130,9 +130,9 @@ renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
-// Tone mapping for modern color space lighting
+// FIXED: Increased exposure for the physically accurate dark scene
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.2; // Bumped exposure slightly to ensure visibility
+renderer.toneMappingExposure = 2.5; 
 container.appendChild(renderer.domElement);
 
 const raycaster = new THREE.Raycaster();
@@ -149,23 +149,18 @@ const spectatorMat = new THREE.MeshLambertMaterial({{ color:{hx(c["spectator_col
 const roseMat = new THREE.MeshBasicMaterial({{ color:{hx(c["rose_color"])}, transparent:true, opacity:0.9 }});
 const bloodMat = new THREE.MeshBasicMaterial({{ color:{hx(c["blood_color"])}, transparent:true, opacity:0.6 }});
 
-// ---------- Physical Lighting Scaled ----------
-// Ambient & Hemisphere lights provide base visibility so shadows aren't pitch black
-scene.add(new THREE.AmbientLight(0xffffff, 2.5));
-scene.add(new THREE.HemisphereLight(0xffffff, {hx(c["wood_dark"])}, 3.0));
+// ---------- Physical Lighting (High Candelas / Lux) ----------
+scene.add(new THREE.AmbientLight(0xffffff, 20.0));
+scene.add(new THREE.HemisphereLight(0xffffff, {hx(c["wood_dark"])}, 20.0));
 
-// Directional Light acting as strong moonlight / ambient fill
-const dirLight = new THREE.DirectionalLight({hx(c["light_color"])}, 15.0);
+const dirLight = new THREE.DirectionalLight({hx(c["light_color"])}, 50.0);
 dirLight.position.set(10, 25, 10);
 dirLight.castShadow = true;
 dirLight.shadow.mapSize.set(1024, 1024);
 scene.add(dirLight);
 
-// Spotlight over the table
-const spotlight = new THREE.SpotLight({hx(c["light_color"])}, {c["light_intensity"]*150});
+const spotlight = new THREE.SpotLight({hx(c["light_color"])}, {c["light_intensity"]*30000}, 0, Math.PI/5, 0.4, 2);
 spotlight.position.set(0, 12, 0);
-spotlight.angle = Math.PI/5;
-spotlight.penumbra = 0.4;
 spotlight.castShadow = true;
 scene.add(spotlight);
 
@@ -367,8 +362,8 @@ for (let i = 0; i < 12; i++) {{
     flame.position.set(Math.cos(angle) * radius, 0.28, Math.sin(angle) * radius);
     chandelier.add(flame);
 
-    // FIXED: Intensity set to 150 candelas, distance 0 (infinite natural decay)
-    const cLight = new THREE.PointLight({hx(c["light_color"])}, 150.0, 0);
+    // FIXED: Massive 800 candela physical output
+    const cLight = new THREE.PointLight({hx(c["light_color"])}, 800.0, 0, 2);
     cLight.position.copy(flame.position);
     chandelier.add(cLight);
     chandelierLights.push(cLight);
@@ -528,8 +523,8 @@ for (let tier = 0; tier < 3; tier++) {{
             cb.add(flame);
         }}
 
-        // FIXED: Intensity set to 100 candelas, distance 0
-        const cLight = new THREE.PointLight({hx(c["light_color"])}, 100.0, 0);
+        // FIXED: 300 candela physical output
+        const cLight = new THREE.PointLight({hx(c["light_color"])}, 300.0, 0, 2);
         cLight.position.y = 0.32;
         cb.add(cLight);
         candelabras.push(cLight);
@@ -871,8 +866,8 @@ for (let i = 0; i < 10; i++) {{
     fixture.position.set(Math.cos(angle) * outerRadius, tierCount * tierHeight + 0.5, Math.sin(angle) * outerRadius);
     scene.add(fixture);
 
-    // FIXED: Intensity set to 300 candelas, distance 0
-    const light = new THREE.PointLight({hx(c["light_color"])}, {c["light_intensity"]*200.0}, 0);
+    // FIXED: Massive 8000 candela physical output
+    const light = new THREE.PointLight({hx(c["light_color"])}, 8000.0, 0, 2);
     light.position.copy(fixture.position);
     light.position.y -= 0.25;
     scene.add(light);
@@ -1021,7 +1016,8 @@ if (MODE !== 'clinical') {{
 // ---------- Camera Controls ----------
 let isDragging = false;
 let prevMouse = {{x:0, y:0}};
-let spherical = {{radius:22, theta:Math.PI/4, phi:Math.PI/3}};
+// FIXED: Adjusted spherical to match new inside-radius camera origin
+let spherical = {{radius:14, theta:Math.PI/4, phi:Math.PI/3}};
 
 function updateCamera() {{
     camera.position.x = spherical.radius*Math.sin(spherical.phi)*Math.cos(spherical.theta);
@@ -1045,7 +1041,7 @@ renderer.domElement.addEventListener('mousemove', e => {{
 window.addEventListener('mouseup', () => {{ isDragging=false; }});
 renderer.domElement.addEventListener('wheel', e => {{
     e.preventDefault();
-    spherical.radius = Math.max(12, Math.min(40, spherical.radius+e.deltaY*0.04));
+    spherical.radius = Math.max(8, Math.min(20, spherical.radius+e.deltaY*0.04));
     updateCamera();
 }}, {{passive:false}});
 
@@ -1166,23 +1162,19 @@ function animate() {{
     requestAnimationFrame(animate);
     const t = clock2.getElapsedTime();
 
-    // Flicker lights (Calibrated)
+    // FIXED: Animation logic uses the new base candela numbers
     gaslights.forEach((light, i) => {{
         const f = Math.sin(t*15+i*2.5)*{flicker_intensity} + Math.sin(t*31+i*4)*{flicker_intensity*0.5};
-        light.intensity = {c["light_intensity"]*200.0}*(1+f);
+        light.intensity = 8000.0 * (1+f);
         if(glowMeshes[i]) glowMeshes[i].material.opacity = 0.7+f*0.3;
     }});
 
-    // Chandelier sway and flicker
-    chandelier.rotation.x = Math.sin(t*0.5)*0.015;
-    chandelier.rotation.z = Math.cos(t*0.3)*0.01;
     chandelierLights.forEach((cl, i) => {{
-        cl.intensity = 150.0 + Math.sin(t*12+i*3)*30.0;
+        cl.intensity = 800.0 + Math.sin(t*12+i*3)*150.0;
     }});
 
-    // Candelabra flicker
     candelabras.forEach((cl, i) => {{
-        cl.intensity = 100.0 + Math.sin(t*8+i*5)*20.0;
+        cl.intensity = 300.0 + Math.sin(t*8+i*5)*80.0;
     }});
 
     // Pendulum
