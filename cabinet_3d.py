@@ -29,9 +29,10 @@ def get_cabinet_3d(mode: str = "gaslight", intensity: int = 3) -> str:
 <html><head><meta charset="utf-8">
 <style>
 *{{margin:0;padding:0;box-sizing:border-box;}}
-body{{width:100%;height:100vh;overflow:hidden;background:#111;font-family:Georgia,serif;color:{text};}}
-#container{{width:100%;height:100%;cursor:grab;}}
+html,body{{width:100%;height:100%;overflow:hidden;background:#111;font-family:Georgia,serif;color:{text};}}
+#container{{width:100%;height:100%;position:relative;cursor:grab;}}
 #container:active{{cursor:grabbing;}}
+canvas{{display:block;width:100%!important;height:100%!important;}}
 .ui{{position:absolute;pointer-events:none;z-index:100;text-shadow:0 0 8px rgba(0,0,0,0.8);}}
 #title{{top:12px;left:50%;transform:translateX(-50%);font-size:14px;letter-spacing:4px;opacity:0.7;}}
 #info{{bottom:12px;left:50%;transform:translateX(-50%);font-size:11px;opacity:0.4;}}
@@ -826,6 +827,7 @@ function animate(){{
     ren.render(scene,cam);
 }}
 window.onresize=()=>{{cam.aspect=cW()/cH();cam.updateProjectionMatrix();ren.setSize(cW(),cH());}};
+setTimeout(()=>{{cam.aspect=cW()/cH();cam.updateProjectionMatrix();ren.setSize(cW(),cH());}},100);
 animate();
 }})();
 </script></body></html>'''
