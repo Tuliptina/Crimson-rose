@@ -1,26 +1,12 @@
 """
 🎭 The Anatomy Theatre — Ultimate 3D Experience (ENHANCED)
-Fully immersive Three.js Victorian anatomy theatre with:
-- Animated spectators and anatomist
-- Interactive clickable objects
-- Atmospheric effects (fog, shadows, rain)
-- Story elements (Red Rose secrets, hidden lore)
-- Intensity-scaled creepiness
+Fully immersive Three.js Victorian anatomy theatre.
 
-NEW ELEMENTS:
-- Domed ceiling with painted fresco
-- Grand chandelier (swaying, candlelit)
-- Stone columns between gallery tiers
-- Arched entrance doorway with heavy doors
-- Chalkboard with anatomical sketches
-- Anatomical wall charts / banners
-- Drainage channels with liquid at high intensity
-- Blood stains at intensity 4+
-- Candelabras on gallery railings
-- Grandfather clock (animated hands)
-- Rats skittering at intensity 3+
-- Ravens perched in gothic mode
-- Second stretcher in shadows at intensity 5
+UPDATES IMPLEMENTED:
+- Upgraded to Three.js r183
+- Integrated ACESFilmicToneMapping for modern sRGB color space management
+- Calibrated all PointLight, SpotLight, and DirectionalLight intensities for physically based lighting (inverse-square decay)
+- Adjusted animation loop flicker math to match physical light scales
 """
 
 def get_theatre_3d(mode: str = "gaslight", intensity: int = 3) -> str:
@@ -112,7 +98,7 @@ canvas {{ display:block; width:100%!important; height:100%!important; }}
 <div id="whisper"></div>
 <div class="secret-found" id="secret-msg">SECRET DISCOVERED</div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r183/three.min.js"></script>
 <script>
 (function() {{
 'use strict';
@@ -143,6 +129,10 @@ renderer.setSize(W, H);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+// Tone mapping for modern color space lighting
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.0;
 container.appendChild(renderer.domElement);
 
 const raycaster = new THREE.Raycaster();
@@ -159,17 +149,17 @@ const spectatorMat = new THREE.MeshLambertMaterial({{ color:{hx(c["spectator_col
 const roseMat = new THREE.MeshBasicMaterial({{ color:{hx(c["rose_color"])}, transparent:true, opacity:0.9 }});
 const bloodMat = new THREE.MeshBasicMaterial({{ color:{hx(c["blood_color"])}, transparent:true, opacity:0.6 }});
 
-// ---------- Lighting ----------
+// ---------- Lighting (Scaled for Physical Based Lighting) ----------
 scene.add(new THREE.AmbientLight(0xffffff, 0.3));
-scene.add(new THREE.HemisphereLight(0xffffff, {hx(c["wood_dark"])}, 0.4));
+scene.add(new THREE.HemisphereLight(0xffffff, {hx(c["wood_dark"])}, 0.5));
 
-const dirLight = new THREE.DirectionalLight({hx(c["light_color"])}, 0.8);
+const dirLight = new THREE.DirectionalLight({hx(c["light_color"])}, 2.5);
 dirLight.position.set(10, 25, 10);
 dirLight.castShadow = true;
 dirLight.shadow.mapSize.set(1024, 1024);
 scene.add(dirLight);
 
-const spotlight = new THREE.SpotLight({hx(c["light_color"])}, {c["light_intensity"]*1.2});
+const spotlight = new THREE.SpotLight({hx(c["light_color"])}, {c["light_intensity"]*25});
 spotlight.position.set(0, 12, 0);
 spotlight.angle = Math.PI/5;
 spotlight.penumbra = 0.4;
@@ -194,7 +184,7 @@ pit.rotation.x = -Math.PI/2;
 pit.position.y = 0.01;
 scene.add(pit);
 
-// ========== NEW: Drainage Channels ==========
+// Drainage Channels
 for (let i = 0; i < 4; i++) {{
     const angle = (i / 4) * Math.PI * 2 + Math.PI/8;
     const channel = new THREE.Mesh(
@@ -216,7 +206,7 @@ for (let i = 0; i < 4; i++) {{
     }}
 }}
 
-// ========== NEW: Blood Stains (intensity 4+) ==========
+// Blood Stains
 if (INTENSITY >= 4) {{
     const stainPositions = [
         [1.2, 0.5], [-0.8, 1.5], [0.5, -1.2], [-1.5, -0.3], [2.0, 0.0]
@@ -253,14 +243,13 @@ for (let i = 0; i < tierCount; i++) {{
     tier.receiveShadow = true;
     scene.add(tier);
 
-    // Railing
     const rail = new THREE.Mesh(new THREE.TorusGeometry(radius + 0.15, 0.04, 6, 48), metalMat);
     rail.rotation.x = Math.PI / 2;
     rail.position.y = y + 0.9;
     scene.add(rail);
 }}
 
-// ========== NEW: Stone Columns ==========
+// Stone Columns
 for (let tier = 0; tier < tierCount; tier++) {{
     const radius = innerRadius + tier * tierDepth + tierDepth - 0.3;
     const numCols = 8 + tier * 2;
@@ -268,7 +257,6 @@ for (let tier = 0; tier < tierCount; tier++) {{
         const angle = (i / numCols) * Math.PI * 2;
         const col = new THREE.Group();
 
-        // Shaft
         const shaft = new THREE.Mesh(
             new THREE.CylinderGeometry(0.12, 0.14, tierHeight - 0.3, 8),
             stoneMat
@@ -276,7 +264,6 @@ for (let tier = 0; tier < tierCount; tier++) {{
         shaft.position.y = (tierHeight - 0.3) / 2;
         col.add(shaft);
 
-        // Capital
         const capital = new THREE.Mesh(
             new THREE.CylinderGeometry(0.2, 0.12, 0.15, 8),
             stoneMat
@@ -284,7 +271,6 @@ for (let tier = 0; tier < tierCount; tier++) {{
         capital.position.y = tierHeight - 0.3;
         col.add(capital);
 
-        // Base
         const base = new THREE.Mesh(
             new THREE.CylinderGeometry(0.14, 0.2, 0.1, 8),
             stoneMat
@@ -309,7 +295,7 @@ const wall = new THREE.Mesh(
 wall.position.y = (tierCount * tierHeight) / 2;
 scene.add(wall);
 
-// ========== NEW: Domed Ceiling ==========
+// Domed Ceiling
 const dome = new THREE.Mesh(
     new THREE.SphereGeometry(outerRadius + 2, 48, 24, 0, Math.PI * 2, 0, Math.PI / 2.5),
     new THREE.MeshLambertMaterial({{
@@ -320,7 +306,6 @@ const dome = new THREE.Mesh(
 dome.position.y = tierCount * tierHeight + 1;
 scene.add(dome);
 
-// Dome fresco ring (painted band)
 const frescoRing = new THREE.Mesh(
     new THREE.TorusGeometry(outerRadius * 0.6, 0.8, 8, 48),
     new THREE.MeshLambertMaterial({{
@@ -333,21 +318,18 @@ frescoRing.rotation.x = Math.PI / 2;
 frescoRing.position.y = tierCount * tierHeight + 3;
 scene.add(frescoRing);
 
-// ========== NEW: Grand Chandelier ==========
+// Grand Chandelier
 const chandelier = new THREE.Group();
 chandelier.userData = {{ type:'chandelier', title:'The Grand Chandelier', desc:'Iron and candle. It sways as if breathing.', lore:'Installed 1842. Three men died in the hoisting.' }};
 
-// Central ring
 const chandelierRing = new THREE.Mesh(new THREE.TorusGeometry(1.8, 0.08, 8, 24), metalMat);
 chandelierRing.rotation.x = Math.PI / 2;
 chandelier.add(chandelierRing);
 
-// Inner ring
 const innerRing = new THREE.Mesh(new THREE.TorusGeometry(0.9, 0.06, 8, 16), metalMat);
 innerRing.rotation.x = Math.PI / 2;
 chandelier.add(innerRing);
 
-// Cross bars
 for (let i = 0; i < 4; i++) {{
     const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 3.6, 4), metalMat);
     bar.rotation.z = Math.PI / 2;
@@ -355,23 +337,19 @@ for (let i = 0; i < 4; i++) {{
     chandelier.add(bar);
 }}
 
-// Chain to ceiling
 const chain = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 4, 6), metalMat);
 chain.position.y = 2;
 chandelier.add(chain);
 
-// Candle holders and lights
 const chandelierLights = [];
 for (let i = 0; i < 12; i++) {{
     const angle = (i / 12) * Math.PI * 2;
     const radius = i % 2 === 0 ? 1.8 : 0.9;
 
-    // Holder
     const holder = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.06, 0.12, 6), metalMat);
     holder.position.set(Math.cos(angle) * radius, 0.06, Math.sin(angle) * radius);
     chandelier.add(holder);
 
-    // Candle
     const candle = new THREE.Mesh(
         new THREE.CylinderGeometry(0.02, 0.025, 0.15, 6),
         new THREE.MeshLambertMaterial({{ color: 0xfffff0 }})
@@ -379,7 +357,6 @@ for (let i = 0; i < 12; i++) {{
     candle.position.set(Math.cos(angle) * radius, 0.18, Math.sin(angle) * radius);
     chandelier.add(candle);
 
-    // Flame glow
     const flame = new THREE.Mesh(
         new THREE.SphereGeometry(0.03, 6, 4),
         new THREE.MeshBasicMaterial({{ color:{hx(c["light_color"])}, transparent:true, opacity:0.9 }})
@@ -387,8 +364,7 @@ for (let i = 0; i < 12; i++) {{
     flame.position.set(Math.cos(angle) * radius, 0.28, Math.sin(angle) * radius);
     chandelier.add(flame);
 
-    // Light
-    const cLight = new THREE.PointLight({hx(c["light_color"])}, 0.15, 8);
+    const cLight = new THREE.PointLight({hx(c["light_color"])}, 10.0, 8);
     cLight.position.copy(flame.position);
     chandelier.add(cLight);
     chandelierLights.push(cLight);
@@ -398,7 +374,7 @@ chandelier.position.set(0, tierCount * tierHeight + 1, 0);
 scene.add(chandelier);
 clickableObjects.push(chandelier);
 
-// ========== NEW: Arched Entrance Doorway ==========
+// Arched Entrance Doorway
 const doorway = new THREE.Group();
 doorway.userData = {{ type:'doorway', title:'The Entrance', desc:'Heavy oak doors, slightly ajar. A draught pushes through.', lore:'Once you enter, leaving is... complicated.' }};
 
@@ -409,7 +385,6 @@ const doorFrame = new THREE.Mesh(
 doorFrame.position.y = 2.25;
 doorway.add(doorFrame);
 
-// Arch top
 const arch = new THREE.Mesh(
     new THREE.TorusGeometry(1.75, 0.25, 8, 16, Math.PI),
     stoneMat
@@ -418,7 +393,6 @@ arch.position.y = 4.5;
 arch.rotation.x = Math.PI;
 doorway.add(arch);
 
-// Door cutout (dark interior)
 const doorVoid = new THREE.Mesh(
     new THREE.BoxGeometry(2.8, 3.8, 0.5),
     new THREE.MeshBasicMaterial({{ color: 0x050505 }})
@@ -426,7 +400,6 @@ const doorVoid = new THREE.Mesh(
 doorVoid.position.set(0, 2.0, 0);
 doorway.add(doorVoid);
 
-// Left door (slightly open)
 const leftDoor = new THREE.Mesh(
     new THREE.BoxGeometry(1.3, 3.6, 0.12),
     darkWoodMat
@@ -435,7 +408,6 @@ leftDoor.position.set(-0.8, 1.9, 0.15);
 leftDoor.rotation.y = 0.2;
 doorway.add(leftDoor);
 
-// Right door (ajar)
 const rightDoor = new THREE.Mesh(
     new THREE.BoxGeometry(1.3, 3.6, 0.12),
     darkWoodMat
@@ -444,7 +416,6 @@ rightDoor.position.set(0.8, 1.9, 0.15);
 rightDoor.rotation.y = -0.15;
 doorway.add(rightDoor);
 
-// Door handles
 [-0.2, 0.2].forEach(x => {{
     const handle = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 6), metalMat);
     handle.position.set(x, 1.8, 0.3);
@@ -455,7 +426,7 @@ doorway.position.set(0, 0, outerRadius + 1.2);
 scene.add(doorway);
 clickableObjects.push(doorway);
 
-// ========== NEW: Chalkboard ==========
+// Chalkboard
 const chalkboard = new THREE.Group();
 chalkboard.userData = {{ type:'chalkboard', title:'Chalkboard', desc:'Anatomical diagrams in confident chalk strokes.', lore: INTENSITY >= 3 ? 'A name scratched in the corner: "HELP ME"' : 'Standard teaching material.' }};
 
@@ -470,12 +441,10 @@ const boardSurface = new THREE.Mesh(
 boardSurface.position.set(0, 0.9, 0.05);
 chalkboard.add(boardSurface);
 
-// Chalk tray
 const tray = new THREE.Mesh(new THREE.BoxGeometry(2.5, 0.06, 0.12), darkWoodMat);
 tray.position.set(0, 0.05, 0.08);
 chalkboard.add(tray);
 
-// Chalk pieces
 [0.3, -0.5, 0.8].forEach(x => {{
     const chalk = new THREE.Mesh(
         new THREE.CylinderGeometry(0.015, 0.015, 0.08, 6),
@@ -491,7 +460,7 @@ chalkboard.rotation.y = Math.PI / 4;
 scene.add(chalkboard);
 clickableObjects.push(chalkboard);
 
-// ========== NEW: Wall Charts / Banners ==========
+// Wall Charts / Banners
 const bannerData = [
     {{ angle: 0.8, title: 'Anatomical Chart', desc: 'Circulatory system in meticulous detail.', lore: 'Red ink only. Always red.' }},
     {{ angle: 2.5, title: 'Organ Reference', desc: 'Cross-sections of major organs.', lore: 'Some specimens do not match any known anatomy.' }},
@@ -510,7 +479,6 @@ bannerData.forEach(data => {{
     bannerMesh.position.y = 1.0;
     banner.add(bannerMesh);
 
-    // Hanging rod
     const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 1.4, 6), metalMat);
     rod.position.y = 2.05;
     rod.rotation.z = Math.PI / 2;
@@ -523,7 +491,7 @@ bannerData.forEach(data => {{
     clickableObjects.push(banner);
 }});
 
-// ========== NEW: Candelabras on Railings ==========
+// Candelabras on Railings
 const candelabras = [];
 for (let tier = 0; tier < 3; tier++) {{
     const numCandelabras = 6 + tier * 2;
@@ -534,16 +502,13 @@ for (let tier = 0; tier < 3; tier++) {{
         const angle = (i / numCandelabras) * Math.PI * 2;
         const cb = new THREE.Group();
 
-        // Base
         const cbBase = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.07, 0.06, 6), metalMat);
         cb.add(cbBase);
 
-        // Stem
         const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.02, 0.25, 6), metalMat);
         stem.position.y = 0.15;
         cb.add(stem);
 
-        // Arms (3-branch)
         for (let a = 0; a < 3; a++) {{
             const armAngle = (a / 3) * Math.PI * 2;
             const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.12, 4), metalMat);
@@ -551,7 +516,6 @@ for (let tier = 0; tier < 3; tier++) {{
             arm.rotation.z = (Math.cos(armAngle) > 0 ? 1 : -1) * 0.4;
             cb.add(arm);
 
-            // Flame
             const flame = new THREE.Mesh(
                 new THREE.SphereGeometry(0.02, 4, 3),
                 new THREE.MeshBasicMaterial({{ color:{hx(c["light_color"])}, transparent:true, opacity:0.8 }})
@@ -560,8 +524,7 @@ for (let tier = 0; tier < 3; tier++) {{
             cb.add(flame);
         }}
 
-        // Small light
-        const cLight = new THREE.PointLight({hx(c["light_color"])}, 0.08, 4);
+        const cLight = new THREE.PointLight({hx(c["light_color"])}, 5.0, 4);
         cLight.position.y = 0.32;
         cb.add(cLight);
         candelabras.push(cLight);
@@ -571,22 +534,19 @@ for (let tier = 0; tier < 3; tier++) {{
     }}
 }}
 
-// ========== NEW: Grandfather Clock ==========
+// Grandfather Clock
 const clock = new THREE.Group();
 clock.userData = {{ type:'clock', title:'Grandfather Clock', desc:'The pendulum swings. The hour is late.', lore: INTENSITY >= 4 ? 'The hands run backwards after midnight.' : 'Westminster chime mechanism. Silent tonight.' }};
 
-// Body
 const clockBody = new THREE.Mesh(new THREE.BoxGeometry(0.7, 2.5, 0.4), darkWoodMat);
 clockBody.position.y = 1.25;
 clock.add(clockBody);
 
-// Crown
 const clockCrown = new THREE.Mesh(new THREE.ConeGeometry(0.5, 0.4, 4), darkWoodMat);
 clockCrown.position.y = 2.7;
 clockCrown.rotation.y = Math.PI / 4;
 clock.add(clockCrown);
 
-// Face
 const clockFace = new THREE.Mesh(
     new THREE.CircleGeometry(0.28, 24),
     new THREE.MeshLambertMaterial({{ color: 0xfffff0 }})
@@ -594,7 +554,6 @@ const clockFace = new THREE.Mesh(
 clockFace.position.set(0, 1.8, 0.21);
 clock.add(clockFace);
 
-// Hour hand
 const hourHand = new THREE.Mesh(
     new THREE.BoxGeometry(0.02, 0.16, 0.01),
     new THREE.MeshLambertMaterial({{ color: 0x111111 }})
@@ -602,7 +561,6 @@ const hourHand = new THREE.Mesh(
 hourHand.position.set(0, 1.85, 0.22);
 clock.add(hourHand);
 
-// Minute hand
 const minuteHand = new THREE.Mesh(
     new THREE.BoxGeometry(0.015, 0.22, 0.01),
     new THREE.MeshLambertMaterial({{ color: 0x111111 }})
@@ -611,7 +569,6 @@ minuteHand.position.set(0, 1.84, 0.23);
 minuteHand.rotation.z = 0.5;
 clock.add(minuteHand);
 
-// Pendulum
 const pendulum = new THREE.Group();
 const pendulumRod = new THREE.Mesh(
     new THREE.CylinderGeometry(0.008, 0.008, 0.8, 6),
@@ -636,7 +593,7 @@ clock.rotation.y = -Math.PI / 3;
 scene.add(clock);
 clickableObjects.push(clock);
 
-// ---------- Dissection Table ----------
+// Dissection Table
 const tableGroup = new THREE.Group();
 tableGroup.userData = {{ type:'table', title:'The Dissection Table', desc:'Cold metal. Drainage channels. The subject waits.', lore:'How many have lain here before?' }};
 
@@ -654,7 +611,7 @@ tableGroup.add(tableTop);
 scene.add(tableGroup);
 clickableObjects.push(tableGroup);
 
-// ---------- Subject ----------
+// Subject
 const subjectGroup = new THREE.Group();
 subjectGroup.userData = {{ type:'subject', title:'The Subject', desc:'A shape beneath white cloth. Still. Silent.', lore: INTENSITY >= 4 ? 'The locket... is that Sarah?' : 'Identity unknown.' }};
 
@@ -678,7 +635,7 @@ subjectGroup.add(chest);
 scene.add(subjectGroup);
 clickableObjects.push(subjectGroup);
 
-// ========== NEW: Second Stretcher (Intensity 5) ==========
+// Second Stretcher (Intensity 5)
 if (INTENSITY >= 5) {{
     const stretcher = new THREE.Group();
     stretcher.userData = {{ type:'stretcher', title:'Another Subject', desc:'A second body. Uncovered. Waiting.', lore:'They brought two tonight. Why?', isSecret:true, secretId:'second_body' }};
@@ -703,7 +660,7 @@ if (INTENSITY >= 5) {{
     clickableObjects.push(stretcher);
 }}
 
-// ---------- Anatomist ----------
+// Anatomist
 const anatomist = new THREE.Group();
 anatomist.userData = {{ type:'anatomist', title:'The Anatomist', desc:'A figure of authority. Steady hands. Cold eyes.', lore:'Is that Fitzroy? The stance. The precision.' }};
 
@@ -738,7 +695,7 @@ anatomist.position.set(0, 0, -1.3);
 scene.add(anatomist);
 clickableObjects.push(anatomist);
 
-// ---------- Spectators ----------
+// Spectators
 const spectators = [];
 const spectatorData = [
     {{ tier:0, angle:0.5, desc:'A medical student. Pale. Sweating.' }},
@@ -790,7 +747,7 @@ for (let i = 0; i < numSpec; i++) {{
     clickableObjects.push(spectator);
 }}
 
-// ========== NEW: Rats (Intensity 3+) ==========
+// Rats (Intensity 3+)
 const rats = [];
 if (INTENSITY >= 3) {{
     const numRats = Math.min(INTENSITY - 1, 5);
@@ -804,7 +761,6 @@ if (INTENSITY >= 3) {{
         ratBody.scale.set(1, 0.7, 1.5);
         rat.add(ratBody);
 
-        // Head
         const ratHead = new THREE.Mesh(
             new THREE.SphereGeometry(0.04, 6, 4),
             new THREE.MeshLambertMaterial({{ color: 0x3a3020 }})
@@ -812,7 +768,6 @@ if (INTENSITY >= 3) {{
         ratHead.position.set(0, 0.02, 0.1);
         rat.add(ratHead);
 
-        // Eyes
         [-0.02, 0.02].forEach(x => {{
             const eye = new THREE.Mesh(
                 new THREE.SphereGeometry(0.008, 4, 4),
@@ -822,7 +777,6 @@ if (INTENSITY >= 3) {{
             rat.add(eye);
         }});
 
-        // Tail
         const tail = new THREE.Mesh(
             new THREE.CylinderGeometry(0.005, 0.003, 0.2, 4),
             new THREE.MeshLambertMaterial({{ color: 0x553322 }})
@@ -841,7 +795,7 @@ if (INTENSITY >= 3) {{
     }}
 }}
 
-// ========== NEW: Ravens (Gothic mode) ==========
+// Ravens (Gothic mode)
 const ravens = [];
 if (MODE === 'gothic' && INTENSITY >= 2) {{
     const numRavens = Math.min(INTENSITY, 4);
@@ -862,7 +816,6 @@ if (MODE === 'gothic' && INTENSITY >= 2) {{
         ravenHead.position.set(0, 0.08, 0.12);
         raven.add(ravenHead);
 
-        // Beak
         const beak = new THREE.Mesh(
             new THREE.ConeGeometry(0.02, 0.06, 4),
             new THREE.MeshLambertMaterial({{ color: 0x222222 }})
@@ -871,7 +824,6 @@ if (MODE === 'gothic' && INTENSITY >= 2) {{
         beak.rotation.x = Math.PI / 2;
         raven.add(beak);
 
-        // Eyes
         [-0.03, 0.03].forEach(x => {{
             const eye = new THREE.Mesh(
                 new THREE.SphereGeometry(0.012, 4, 4),
@@ -881,7 +833,6 @@ if (MODE === 'gothic' && INTENSITY >= 2) {{
             raven.add(eye);
         }});
 
-        // Wings
         [-1, 1].forEach(side => {{
             const wing = new THREE.Mesh(
                 new THREE.PlaneGeometry(0.25, 0.12),
@@ -905,7 +856,7 @@ if (MODE === 'gothic' && INTENSITY >= 2) {{
     }}
 }}
 
-// ---------- Gaslights ----------
+// Gaslights
 const gaslights = [];
 const glowMeshes = [];
 for (let i = 0; i < 10; i++) {{
@@ -915,7 +866,7 @@ for (let i = 0; i < 10; i++) {{
     fixture.position.set(Math.cos(angle) * outerRadius, tierCount * tierHeight + 0.5, Math.sin(angle) * outerRadius);
     scene.add(fixture);
 
-    const light = new THREE.PointLight({hx(c["light_color"])}, {c["light_intensity"]*0.4}, 14);
+    const light = new THREE.PointLight({hx(c["light_color"])}, {c["light_intensity"]*15.0}, 14);
     light.position.copy(fixture.position);
     light.position.y -= 0.25;
     scene.add(light);
@@ -930,7 +881,7 @@ for (let i = 0; i < 10; i++) {{
     glowMeshes.push(glow);
 }}
 
-// ---------- Specimen Cabinets ----------
+// Specimen Cabinets
 const cabinetData = [
     {{ x:-3.8, z:3.8, contents:'A heart in a jar. Label: "Subject 23."' }},
     {{ x:3.8, z:3.8, contents:'Infant bones on velvet. A receipt beneath.' }},
@@ -973,7 +924,7 @@ cabinetData.forEach(data => {{
     clickableObjects.push(cabinet);
 }});
 
-// ---------- Hidden Red Roses ----------
+// Hidden Red Roses
 const roses = [];
 const rosePositions = [
     {{x:-1.5,y:0.95,z:0.5}}, {{x:0,y:tierCount*tierHeight+0.2,z:outerRadius-0.8}},
@@ -995,7 +946,7 @@ rosePositions.forEach((pos, idx) => {{
     clickableObjects.push(rose);
 }});
 
-// ---------- Instrument Tray ----------
+// Instrument Tray
 const instrTray = new THREE.Group();
 const instrMesh = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.03, 0.28), metalMat);
 instrTray.add(instrMesh);
@@ -1010,7 +961,7 @@ instrTray.userData = {{ type:'tray', title:'Surgical Instruments', desc:'Scalpel
 scene.add(instrTray);
 clickableObjects.push(instrTray);
 
-// ---------- Podium ----------
+// Podium
 const podium = new THREE.Group();
 const podBase = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.35, 1.1, 8), darkWoodMat);
 podBase.position.y = 0.55;
@@ -1029,7 +980,7 @@ podium.userData = {{ type:'podium', title:'Lecturer\\'s Podium', desc:'Notes in 
 scene.add(podium);
 clickableObjects.push(podium);
 
-// ---------- Particles ----------
+// Particles
 const particleCount = {particle_count};
 const particleGeo = new THREE.BufferGeometry();
 const particlePos = new Float32Array(particleCount * 3);
@@ -1209,23 +1160,23 @@ function animate() {{
     requestAnimationFrame(animate);
     const t = clock2.getElapsedTime();
 
-    // Flicker lights
+    // Flicker lights (Calibrated for r183 light intensity values)
     gaslights.forEach((light, i) => {{
         const f = Math.sin(t*15+i*2.5)*{flicker_intensity} + Math.sin(t*31+i*4)*{flicker_intensity*0.5};
-        light.intensity = {c["light_intensity"]*0.4}*(1+f);
+        light.intensity = {c["light_intensity"]*15.0}*(1+f);
         if(glowMeshes[i]) glowMeshes[i].material.opacity = 0.7+f*0.3;
     }});
 
-    // Chandelier sway
+    // Chandelier sway and flicker
     chandelier.rotation.x = Math.sin(t*0.5)*0.015;
     chandelier.rotation.z = Math.cos(t*0.3)*0.01;
     chandelierLights.forEach((cl, i) => {{
-        cl.intensity = 0.15+Math.sin(t*12+i*3)*0.05;
+        cl.intensity = 10.0 + Math.sin(t*12+i*3)*3.0;
     }});
 
     // Candelabra flicker
     candelabras.forEach((cl, i) => {{
-        cl.intensity = 0.08 + Math.sin(t*8+i*5)*0.03;
+        cl.intensity = 5.0 + Math.sin(t*8+i*5)*1.5;
     }});
 
     // Pendulum
@@ -1296,7 +1247,6 @@ function animate() {{
         rat.group.position.x = Math.cos(rat.angle) * rat.radius;
         rat.group.position.z = Math.sin(rat.angle) * rat.radius;
         rat.group.rotation.y = rat.angle + Math.PI / 2;
-        // Occasional pause
         if (Math.sin(t + rat.angle * 10) > 0.95) {{
             rat.group.position.y = 0.06 + Math.sin(t * 20) * 0.01;
         }}
