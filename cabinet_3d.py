@@ -364,54 +364,411 @@ function slotPos(row, slot) {{
     return {{ x: startX + slot*spacing, y: row*SH + 0.18, z: 0 }};
 }}
 
-BOTTLES.forEach(b => {{
+// Unique bottle geometry builder
+function createBottle(b) {{
     const g = new THREE.Group();
     
-    // Hitbox for clicking - must have opacity > 0 to be raycast
-    const hitboxMat = new THREE.MeshBasicMaterial({{ 
-        transparent: true, 
-        opacity: 0.001,
-        depthWrite: false
-    }});
+    // Hitbox
     const hitbox = new THREE.Mesh(
-        new THREE.BoxGeometry(0.24, 0.44, 0.24),
-        hitboxMat
+        new THREE.BoxGeometry(0.26, 0.48, 0.26),
+        new THREE.MeshBasicMaterial({{ transparent:true, opacity:0.001, depthWrite:false }})
     );
     hitbox.userData = {{ bottleRef: b }};
     g.add(hitbox);
     
-    const glass = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.08, 0.09, 0.32, 12),
-        new THREE.MeshLambertMaterial({{ color:b.color, transparent:true, opacity:0.6 }})
-    );
-    g.add(glass);
+    const glassMat = new THREE.MeshLambertMaterial({{ color:b.color, transparent:true, opacity:0.55 }});
+    const glassMatSolid = new THREE.MeshLambertMaterial({{ color:b.color, transparent:true, opacity:0.75 }});
+    const liqMat = new THREE.MeshLambertMaterial({{ color:b.liquid, transparent:true, opacity:0.85 }});
+    const corkMat = new THREE.MeshLambertMaterial({{ color:0x8b7355 }});
+    const metalMat = new THREE.MeshLambertMaterial({{ color:{metal} }});
+    const waxMat = new THREE.MeshLambertMaterial({{ color:0x880000 }});
+    const labelMat = new THREE.MeshLambertMaterial({{ color:0xffffee, side:THREE.DoubleSide }});
     
-    const lh = 0.28 * b.level;
-    const liq = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.065, 0.075, lh, 12),
-        new THREE.MeshLambertMaterial({{ color:b.liquid, transparent:true, opacity:0.85 }})
-    );
-    liq.position.y = -0.14 + lh/2 + 0.02;
-    g.add(liq);
+    let glassGroup = new THREE.Group();
+    let liquidY = 0, liquidH = 0, neckY = 0.16;
     
-    const cork = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.035, 0.04, 0.05, 8),
-        new THREE.MeshLambertMaterial({{ color: 0x8b7355 }})
-    );
-    cork.position.y = 0.18;
-    g.add(cork);
+    // ===== UNIQUE BOTTLE SHAPES =====
     
-    const label = new THREE.Mesh(
-        new THREE.PlaneGeometry(0.1, 0.08),
-        new THREE.MeshLambertMaterial({{ color: 0xffffee, side: THREE.DoubleSide }})
-    );
-    label.position.set(0, 0, 0.09);
-    g.add(label);
+    if (b.id === 'laudanum') {{
+        // Rectangular amber apothecary bottle
+        const body = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.28, 0.08), glassMat);
+        glassGroup.add(body);
+        const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.04, 0.08, 8), glassMat);
+        neck.position.y = 0.18;
+        glassGroup.add(neck);
+        // Embossed band
+        const band = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.015, 0.09), metalMat);
+        band.position.y = 0.08;
+        glassGroup.add(band);
+        liquidH = 0.24 * b.level; liquidY = -0.14 + liquidH/2 + 0.02; neckY = 0.24;
+        const liq = new THREE.Mesh(new THREE.BoxGeometry(0.10, liquidH, 0.065), liqMat);
+        liq.position.y = liquidY; g.add(liq);
+    }}
+    else if (b.id === 'chloroform') {{
+        // Hexagonal blue poison bottle with ridges
+        const body = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.08, 0.26, 6), glassMat);
+        glassGroup.add(body);
+        // Ridges (poison warning)
+        for (let i = 0; i < 4; i++) {{
+            const ridge = new THREE.Mesh(new THREE.BoxGeometry(0.005, 0.22, 0.16), glassMatSolid);
+            ridge.position.set(0, 0, 0);
+            ridge.rotation.y = i * Math.PI/3;
+            glassGroup.add(ridge);
+        }}
+        const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.035, 0.08, 6), glassMat);
+        neck.position.y = 0.17;
+        glassGroup.add(neck);
+        // Skull emboss
+        const skull = new THREE.Mesh(new THREE.SphereGeometry(0.025, 8, 6), glassMatSolid);
+        skull.position.set(0, 0.02, 0.075);
+        skull.scale.set(1, 1.2, 0.5);
+        glassGroup.add(skull);
+        liquidH = 0.22 * b.level; liquidY = -0.13 + liquidH/2;
+        const liq = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.065, liquidH, 6), liqMat);
+        liq.position.y = liquidY; g.add(liq); neckY = 0.23;
+    }}
+    else if (b.id === 'soothing') {{
+        // Round cheerful bottle with wide base
+        const body = new THREE.Mesh(new THREE.SphereGeometry(0.09, 16, 12), glassMat);
+        body.scale.set(1, 1.3, 1);
+        glassGroup.add(body);
+        const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.045, 0.1, 12), glassMat);
+        neck.position.y = 0.15;
+        glassGroup.add(neck);
+        liquidH = 0.18 * b.level; liquidY = -0.08 + liquidH/2;
+        const liq = new THREE.Mesh(new THREE.SphereGeometry(0.075, 12, 8), liqMat);
+        liq.scale.set(1, b.level * 1.1, 1);
+        liq.position.y = liquidY - 0.03; g.add(liq); neckY = 0.22;
+    }}
+    else if (b.id === 'mercury') {{
+        // Dark cylindrical with silver bands
+        const body = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.07, 0.3, 16), glassMat);
+        glassGroup.add(body);
+        for (let i = 0; i < 3; i++) {{
+            const ring = new THREE.Mesh(new THREE.TorusGeometry(0.065, 0.008, 8, 16), metalMat);
+            ring.position.y = -0.08 + i * 0.1;
+            ring.rotation.x = Math.PI/2;
+            glassGroup.add(ring);
+        }}
+        const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.035, 0.06, 12), glassMat);
+        neck.position.y = 0.18;
+        glassGroup.add(neck);
+        liquidH = 0.26 * b.level; liquidY = -0.15 + liquidH/2 + 0.02;
+        const liq = new THREE.Mesh(new THREE.CylinderGeometry(0.048, 0.058, liquidH, 12), liqMat);
+        liq.position.y = liquidY; g.add(liq); neckY = 0.23;
+    }}
+    else if (b.id === 'arsenic') {{
+        // Elegant oval perfume-style
+        const body = new THREE.Mesh(new THREE.SphereGeometry(0.08, 16, 12), glassMat);
+        body.scale.set(0.8, 1.4, 0.6);
+        glassGroup.add(body);
+        const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.03, 0.12, 12), glassMat);
+        neck.position.y = 0.15;
+        glassGroup.add(neck);
+        // Decorative stopper
+        const stopper = new THREE.Mesh(new THREE.SphereGeometry(0.03, 8, 6), glassMatSolid);
+        stopper.position.y = 0.24;
+        glassGroup.add(stopper);
+        liquidH = 0.16 * b.level; liquidY = -0.06 + liquidH/2;
+        const liq = new THREE.Mesh(new THREE.SphereGeometry(0.065, 12, 8), liqMat);
+        liq.scale.set(0.75, b.level * 1.2, 0.55);
+        liq.position.y = liquidY - 0.02; g.add(liq); neckY = 0.28;
+    }}
+    else if (b.id === 'ether') {{
+        // Ribbed brown bottle
+        const body = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.08, 0.28, 12), glassMat);
+        glassGroup.add(body);
+        // Vertical ribs
+        for (let i = 0; i < 8; i++) {{
+            const rib = new THREE.Mesh(new THREE.BoxGeometry(0.008, 0.26, 0.02), glassMatSolid);
+            const angle = (i / 8) * Math.PI * 2;
+            rib.position.set(Math.sin(angle) * 0.075, 0, Math.cos(angle) * 0.075);
+            rib.rotation.y = angle;
+            glassGroup.add(rib);
+        }}
+        const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.04, 0.07, 8), glassMat);
+        neck.position.y = 0.175;
+        glassGroup.add(neck);
+        liquidH = 0.24 * b.level; liquidY = -0.14 + liquidH/2 + 0.02;
+        const liq = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.065, liquidH, 12), liqMat);
+        liq.position.y = liquidY; g.add(liq); neckY = 0.24;
+    }}
+    else if (b.id === 'cocaine') {{
+        // Tall thin dropper bottle
+        const body = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.055, 0.32, 12), glassMat);
+        glassGroup.add(body);
+        const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.025, 0.08, 8), glassMat);
+        neck.position.y = 0.2;
+        glassGroup.add(neck);
+        // Dropper top
+        const dropper = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.018, 0.06, 8), new THREE.MeshLambertMaterial({{color:0x333333}}));
+        dropper.position.y = 0.27;
+        glassGroup.add(dropper);
+        const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.025, 8, 6), new THREE.MeshLambertMaterial({{color:0x444444}}));
+        bulb.position.y = 0.32;
+        glassGroup.add(bulb);
+        liquidH = 0.28 * b.level; liquidY = -0.16 + liquidH/2 + 0.02;
+        const liq = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.045, liquidH, 12), liqMat);
+        liq.position.y = liquidY; g.add(liq); neckY = 0.35;
+    }}
+    else if (b.id === 'strychnine') {{
+        // Hexagonal red poison bottle
+        const body = new THREE.Mesh(new THREE.CylinderGeometry(0.065, 0.075, 0.28, 6), glassMat);
+        glassGroup.add(body);
+        const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.04, 0.07, 6), glassMat);
+        neck.position.y = 0.175;
+        glassGroup.add(neck);
+        // Red wax seal
+        const wax = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.025, 12), waxMat);
+        wax.position.y = 0.22;
+        glassGroup.add(wax);
+        liquidH = 0.24 * b.level; liquidY = -0.14 + liquidH/2 + 0.02;
+        const liq = new THREE.Mesh(new THREE.CylinderGeometry(0.052, 0.062, liquidH, 6), liqMat);
+        liq.position.y = liquidY; g.add(liq); neckY = 0.25;
+    }}
+    else if (b.id === 'carbolic') {{
+        // Hospital-style ridged blue bottle
+        const body = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.07, 0.3, 8), glassMat);
+        glassGroup.add(body);
+        // Horizontal ridges
+        for (let i = 0; i < 5; i++) {{
+            const ridge = new THREE.Mesh(new THREE.TorusGeometry(0.068, 0.006, 6, 8), glassMatSolid);
+            ridge.position.y = -0.1 + i * 0.06;
+            ridge.rotation.x = Math.PI/2;
+            glassGroup.add(ridge);
+        }}
+        const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.035, 0.06, 8), glassMat);
+        neck.position.y = 0.18;
+        glassGroup.add(neck);
+        liquidH = 0.26 * b.level; liquidY = -0.15 + liquidH/2 + 0.02;
+        const liq = new THREE.Mesh(new THREE.CylinderGeometry(0.048, 0.058, liquidH, 8), liqMat);
+        liq.position.y = liquidY; g.add(liq); neckY = 0.23;
+    }}
+    else if (b.id === 'embalming') {{
+        // Large wide jug with handle
+        const body = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.11, 0.32, 16), glassMat);
+        glassGroup.add(body);
+        const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.06, 0.08, 12), glassMat);
+        neck.position.y = 0.2;
+        glassGroup.add(neck);
+        // Handle
+        const handle = new THREE.Mesh(new THREE.TorusGeometry(0.05, 0.012, 8, 12, Math.PI), glassMatSolid);
+        handle.position.set(0.11, 0.05, 0);
+        handle.rotation.z = Math.PI/2;
+        handle.rotation.y = Math.PI/2;
+        glassGroup.add(handle);
+        liquidH = 0.28 * b.level; liquidY = -0.16 + liquidH/2 + 0.02;
+        const liq = new THREE.Mesh(new THREE.CylinderGeometry(0.085, 0.095, liquidH, 12), liqMat);
+        liq.position.y = liquidY; g.add(liq); neckY = 0.26;
+    }}
+    else if (b.id === 'vita') {{
+        // Ornate teardrop with rose emblem
+        const body = new THREE.Mesh(new THREE.SphereGeometry(0.09, 16, 16), glassMat);
+        body.scale.set(1, 1.5, 1);
+        body.position.y = -0.02;
+        glassGroup.add(body);
+        const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.04, 0.12, 12), glassMat);
+        neck.position.y = 0.18;
+        glassGroup.add(neck);
+        // Rose emblem
+        const rose = new THREE.Mesh(new THREE.SphereGeometry(0.025, 8, 8), waxMat);
+        rose.position.set(0, 0.02, 0.09);
+        rose.scale.set(1, 1, 0.3);
+        glassGroup.add(rose);
+        // Ornate stopper
+        const stopper = new THREE.Mesh(new THREE.ConeGeometry(0.03, 0.06, 8), glassMatSolid);
+        stopper.position.y = 0.28;
+        glassGroup.add(stopper);
+        liquidH = 0.2 * b.level; liquidY = -0.08 + liquidH/2;
+        const liq = new THREE.Mesh(new THREE.SphereGeometry(0.075, 12, 12), liqMat);
+        liq.scale.set(0.9, b.level * 1.3, 0.9);
+        liq.position.y = liquidY - 0.02; g.add(liq); neckY = 0.32;
+    }}
+    else if (b.id === 'unmarked') {{
+        // Plain hexagonal no label
+        const body = new THREE.Mesh(new THREE.CylinderGeometry(0.065, 0.07, 0.26, 6), glassMat);
+        glassGroup.add(body);
+        const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.035, 0.06, 6), glassMat);
+        neck.position.y = 0.16;
+        glassGroup.add(neck);
+        liquidH = 0.22 * b.level; liquidY = -0.13 + liquidH/2;
+        const liq = new THREE.Mesh(new THREE.CylinderGeometry(0.052, 0.058, liquidH, 6), liqMat);
+        liq.position.y = liquidY; g.add(liq); neckY = 0.21;
+    }}
+    else if (b.id === 'unwilling') {{
+        // Black rectangular sinister
+        const body = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.3, 0.08), glassMat);
+        glassGroup.add(body);
+        const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.035, 0.07, 8), glassMat);
+        neck.position.y = 0.185;
+        glassGroup.add(neck);
+        // Black wax seal
+        const seal = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.04, 12), new THREE.MeshLambertMaterial({{color:0x111111}}));
+        seal.position.y = 0.24;
+        glassGroup.add(seal);
+        liquidH = 0.26 * b.level; liquidY = -0.15 + liquidH/2 + 0.02;
+        const liq = new THREE.Mesh(new THREE.BoxGeometry(0.085, liquidH, 0.065), liqMat);
+        liq.position.y = liquidY; g.add(liq); neckY = 0.28;
+    }}
+    else if (b.id === 'mercy') {{
+        // Tiny vial with skull stopper
+        const body = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.035, 0.18, 12), glassMat);
+        glassGroup.add(body);
+        const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.02, 0.04, 8), glassMat);
+        neck.position.y = 0.11;
+        glassGroup.add(neck);
+        // Skull stopper
+        const skullTop = new THREE.Mesh(new THREE.SphereGeometry(0.025, 8, 6), new THREE.MeshLambertMaterial({{color:0xeeeecc}}));
+        skullTop.position.y = 0.16;
+        skullTop.scale.set(1, 0.8, 0.8);
+        glassGroup.add(skullTop);
+        liquidH = 0.15 * b.level; liquidY = -0.09 + liquidH/2;
+        const liq = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.028, liquidH, 12), liqMat);
+        liq.position.y = liquidY; g.add(liq); neckY = 0.19;
+    }}
+    else if (b.id === 'blood_sc') {{
+        // Test tube with cork
+        const body = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.28, 12), glassMat);
+        glassGroup.add(body);
+        // Rounded bottom
+        const bottom = new THREE.Mesh(new THREE.SphereGeometry(0.025, 12, 8, 0, Math.PI*2, 0, Math.PI/2), glassMat);
+        bottom.position.y = -0.14;
+        bottom.rotation.x = Math.PI;
+        glassGroup.add(bottom);
+        // Lip at top
+        const lip = new THREE.Mesh(new THREE.TorusGeometry(0.028, 0.006, 6, 12), glassMatSolid);
+        lip.position.y = 0.14;
+        lip.rotation.x = Math.PI/2;
+        glassGroup.add(lip);
+        liquidH = 0.24 * b.level; liquidY = -0.12 + liquidH/2;
+        const liq = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, liquidH, 12), liqMat);
+        liq.position.y = liquidY; g.add(liq); neckY = 0.18;
+    }}
+    else if (b.id === 'teeth') {{
+        // Wide mouth specimen jar
+        const body = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.09, 0.22, 16), glassMat);
+        glassGroup.add(body);
+        // Screw-top lid
+        const lid = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.11, 0.04, 16), metalMat);
+        lid.position.y = 0.13;
+        glassGroup.add(lid);
+        // Floating teeth particles (will animate)
+        liquidH = 0.18 * b.level; liquidY = -0.09 + liquidH/2;
+        const liq = new THREE.Mesh(new THREE.CylinderGeometry(0.085, 0.075, liquidH, 12), liqMat);
+        liq.position.y = liquidY; g.add(liq); neckY = 0.18;
+    }}
+    else if (b.id === 'leeches') {{
+        // Rounded jar with ventilated lid
+        const body = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.1, 0.24, 16), glassMat);
+        glassGroup.add(body);
+        // Domed top
+        const dome = new THREE.Mesh(new THREE.SphereGeometry(0.09, 12, 8, 0, Math.PI*2, 0, Math.PI/2), glassMat);
+        dome.position.y = 0.12;
+        glassGroup.add(dome);
+        // Ventilated metal lid
+        const lid = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.03, 12), metalMat);
+        lid.position.y = 0.18;
+        glassGroup.add(lid);
+        liquidH = 0.2 * b.level; liquidY = -0.1 + liquidH/2;
+        const liq = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.085, liquidH, 12), liqMat);
+        liq.position.y = liquidY; g.add(liq); neckY = 0.22;
+    }}
+    else if (b.id === 'essence') {{
+        // Ceramic pot with lid
+        const potMat = new THREE.MeshLambertMaterial({{color:0xd4c4a8}});
+        const body = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.09, 0.2, 16), potMat);
+        glassGroup.add(body);
+        // Decorative rim
+        const rim = new THREE.Mesh(new THREE.TorusGeometry(0.085, 0.015, 8, 16), potMat);
+        rim.position.y = 0.1;
+        rim.rotation.x = Math.PI/2;
+        glassGroup.add(rim);
+        // Lid
+        const lid = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.08, 0.04, 12), potMat);
+        lid.position.y = 0.14;
+        glassGroup.add(lid);
+        const knob = new THREE.Mesh(new THREE.SphereGeometry(0.02, 8, 6), potMat);
+        knob.position.y = 0.18;
+        glassGroup.add(knob);
+        neckY = 0.2;
+        // No visible liquid for ceramic
+    }}
+    else if (b.id === 'tapeworm') {{
+        // Tall specimen tube
+        const body = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.05, 0.34, 12), glassMat);
+        glassGroup.add(body);
+        // Base stand
+        const base = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.07, 0.03, 12), metalMat);
+        base.position.y = -0.185;
+        glassGroup.add(base);
+        const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.035, 0.05, 8), glassMat);
+        neck.position.y = 0.195;
+        glassGroup.add(neck);
+        liquidH = 0.3 * b.level; liquidY = -0.15 + liquidH/2;
+        const liq = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.04, liquidH, 12), liqMat);
+        liq.position.y = liquidY; g.add(liq); neckY = 0.25;
+    }}
+    else if (b.id === 'brain') {{
+        // Ornate Victorian jar with dome
+        const body = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.1, 0.22, 12), glassMat);
+        glassGroup.add(body);
+        // Ornate band
+        const band = new THREE.Mesh(new THREE.TorusGeometry(0.095, 0.01, 6, 12), metalMat);
+        band.position.y = 0.05;
+        band.rotation.x = Math.PI/2;
+        glassGroup.add(band);
+        // Dome lid
+        const dome = new THREE.Mesh(new THREE.SphereGeometry(0.085, 12, 8, 0, Math.PI*2, 0, Math.PI/2), metalMat);
+        dome.position.y = 0.11;
+        glassGroup.add(dome);
+        const knob = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.02, 0.04, 8), metalMat);
+        knob.position.y = 0.19;
+        glassGroup.add(knob);
+        liquidH = 0.18 * b.level; liquidY = -0.09 + liquidH/2;
+        const liq = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.085, liquidH, 12), liqMat);
+        liq.position.y = liquidY; g.add(liq); neckY = 0.22;
+    }}
+    else {{
+        // Default bottle
+        const body = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.08, 0.3, 12), glassMat);
+        glassGroup.add(body);
+        const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.04, 0.06, 8), glassMat);
+        neck.position.y = 0.18;
+        glassGroup.add(neck);
+        liquidH = 0.26 * b.level; liquidY = -0.15 + liquidH/2 + 0.02;
+        const liq = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.065, liquidH, 12), liqMat);
+        liq.position.y = liquidY; g.add(liq); neckY = 0.23;
+    }}
     
+    g.add(glassGroup);
+    
+    // Cork (for non-special tops)
+    if (!['arsenic','cocaine','strychnine','unwilling','mercy','teeth','leeches','essence','brain'].includes(b.id)) {{
+        const cork = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.035, 0.045, 8), corkMat);
+        cork.position.y = neckY;
+        g.add(cork);
+    }}
+    
+    // Label (varied styles)
+    if (b.id !== 'unmarked' && b.id !== 'essence') {{
+        const labelW = ['laudanum','unwilling','embalming'].includes(b.id) ? 0.11 : 0.09;
+        const labelH = ['vita','brain'].includes(b.id) ? 0.1 : 0.07;
+        const label = new THREE.Mesh(new THREE.PlaneGeometry(labelW, labelH), labelMat);
+        const labelZ = ['laudanum','unwilling'].includes(b.id) ? 0.042 : 
+                       ['embalming'].includes(b.id) ? 0.11 : 
+                       ['teeth','leeches','brain'].includes(b.id) ? 0.1 : 0.085;
+        label.position.set(0, 0, labelZ);
+        g.add(label);
+    }}
+    
+    return g;
+}}
+
+BOTTLES.forEach(b => {{
+    const g = createBottle(b);
     const p = slotPos(b.row, b.slot);
     g.position.set(p.x, p.y, p.z);
     g.userData = b;
-    
     scene.add(g);
     bottles.push(g);
 }});
