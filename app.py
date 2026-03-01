@@ -3,7 +3,11 @@
 An immersive, atmospheric exploration of a Victorian anatomy theatre.
 Tied to the world of The Crimson Rose series.
 
-Author: Created with Claude
+BUG FIXES:
+- Discovery state now tracked exclusively in st.session_state (not module-level dicts)
+- Specimen cards use single markdown blocks (proper HTML nesting)
+- Secret triggers use programmatic condition evaluation
+- Session state uses lists instead of sets for serialization safety
 """
 
 import streamlit as st
@@ -11,6 +15,7 @@ import random
 from content import (
     get_opening, get_ambient_sound, get_ambient_observation,
     get_anatomy_text, get_random_epigraph, get_specimens_by_category,
+    check_secret_condition,
     ANATOMY_REGIONS, SPECIMENS, SECRETS
 )
 from theatre_3d import get_theatre_3d
@@ -319,22 +324,6 @@ GOTHIC_CSS = """
     position: relative;
 }
 
-.specimen-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: linear-gradient(45deg, transparent 40%, rgba(139, 0, 0, 0.1) 50%, transparent 60%);
-    opacity: 0;
-    transition: opacity 0.3s;
-}
-
-.specimen-card:hover::before {
-    opacity: 1;
-}
-
 .specimen-card:hover {
     border-color: var(--accent-bright);
     box-shadow: 0 0 30px rgba(139, 0, 0, 0.4);
@@ -363,16 +352,8 @@ GOTHIC_CSS = """
 }
 
 @keyframes bloodReveal {
-    from { 
-        opacity: 0; 
-        border-color: transparent;
-        box-shadow: none;
-    }
-    to { 
-        opacity: 1; 
-        border-color: var(--accent-bright);
-        box-shadow: 0 0 20px rgba(139, 0, 0, 0.5);
-    }
+    from { opacity: 0; border-color: transparent; box-shadow: none; }
+    to { opacity: 1; border-color: var(--accent-bright); box-shadow: 0 0 20px rgba(139, 0, 0, 0.5); }
 }
 
 /* Streamlit overrides */
@@ -555,15 +536,6 @@ CLINICAL_CSS = """
     margin-top: 1rem;
 }
 
-/* Clinical specific: monospace for "data" */
-.clinical-data {
-    font-family: 'Courier New', monospace;
-    font-size: 0.85rem;
-    color: var(--text-secondary);
-    background: var(--bg-tertiary);
-    padding: 0.2rem 0.5rem;
-}
-
 /* Streamlit overrides */
 .stSelectbox label, .stSlider label, .stRadio label {
     font-family: 'Inter', sans-serif !important;
@@ -641,56 +613,31 @@ INTENSITY_NAMES = {
 }
 
 def get_intensity_css(intensity: int) -> str:
-    """Generate additional CSS based on intensity level."""
     if intensity <= 2:
         return ""
-    
     effects = []
-    
     if intensity >= 3:
         effects.append("""
-        .narration {
-            animation: subtle-shift 8s infinite;
-        }
-        @keyframes subtle-shift {
-            0%, 100% { filter: brightness(1); }
-            50% { filter: brightness(0.95); }
-        }
+        .narration { animation: subtle-shift 8s infinite; }
+        @keyframes subtle-shift { 0%, 100% { filter: brightness(1); } 50% { filter: brightness(0.95); } }
         """)
-    
     if intensity >= 4:
         effects.append("""
-        .ambient-sound {
-            animation: unease 3s infinite;
-        }
-        @keyframes unease {
-            0%, 100% { transform: translateX(0); }
-            25% { transform: translateX(1px); }
-            75% { transform: translateX(-1px); }
-        }
+        .ambient-sound { animation: unease 3s infinite; }
+        @keyframes unease { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(1px); } 75% { transform: translateX(-1px); } }
         """)
-    
     if intensity >= 5:
         effects.append("""
-        .main-title {
-            animation: glitch 0.5s infinite;
-        }
+        .main-title { animation: glitch 0.5s infinite; }
         @keyframes glitch {
             0%, 100% { text-shadow: inherit; }
             25% { text-shadow: -2px 0 #ff0000, 2px 0 #00ff00; }
             50% { text-shadow: 2px 0 #ff0000, -2px 0 #00ff00; }
             75% { text-shadow: 0 -1px #ff0000, 0 1px #00ff00; }
         }
-        
-        .narration {
-            animation: static 0.1s infinite;
-        }
-        @keyframes static {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.98; }
-        }
+        .narration { animation: static 0.1s infinite; }
+        @keyframes static { 0%, 100% { opacity: 1; } 50% { opacity: 0.98; } }
         """)
-    
     return f"<style>{''.join(effects)}</style>"
 
 
@@ -699,101 +646,30 @@ def get_intensity_css(intensity: int) -> str:
 # =============================================================================
 
 def render_anatomy_diagram(pov: str, mode: str) -> str:
-    """Render the interactive anatomy diagram."""
-    
-    # Color schemes per mode
     colors = {
         "gaslight": {"stroke": "#d4a574", "fill": "#2c1810", "highlight": "#d4a574"},
         "gothic": {"stroke": "#8b0000", "fill": "#1a0a0a", "highlight": "#cc0000"},
         "clinical": {"stroke": "#2f4f4f", "fill": "#ffffff", "highlight": "#3d6b6b"}
     }
     c = colors.get(mode, colors["gaslight"])
-    
     svg = f'''
     <svg viewBox="0 0 300 500" style="max-width: 300px; margin: 0 auto; display: block;">
-        <!-- Body outline -->
-        <ellipse cx="150" cy="60" rx="40" ry="50" 
-                 fill="{c['fill']}" stroke="{c['stroke']}" stroke-width="2"/>
-        
-        <!-- Torso -->
+        <ellipse cx="150" cy="60" rx="40" ry="50" fill="{c['fill']}" stroke="{c['stroke']}" stroke-width="2"/>
         <path d="M110 100 L90 250 L110 280 L140 300 L160 300 L190 280 L210 250 L190 100 Z"
               fill="{c['fill']}" stroke="{c['stroke']}" stroke-width="2"/>
-        
-        <!-- Brain region (clickable) -->
-        <ellipse cx="150" cy="50" rx="25" ry="20" 
-                 fill="transparent" stroke="{c['stroke']}" stroke-width="1" stroke-dasharray="3,3"
-                 class="anatomy-region" data-region="brain"
-                 style="cursor: pointer; transition: all 0.3s;"
-                 onmouseover="this.style.fill='{c['highlight']}'; this.style.fillOpacity='0.3';"
-                 onmouseout="this.style.fill='transparent';"/>
-        <text x="150" y="55" text-anchor="middle" fill="{c['stroke']}" font-size="10" 
-              style="pointer-events: none;">BRAIN</text>
-        
-        <!-- Eyes -->
-        <ellipse cx="135" cy="50" rx="8" ry="5" 
-                 fill="transparent" stroke="{c['stroke']}" stroke-width="1"
-                 class="anatomy-region" data-region="eyes"
-                 style="cursor: pointer; transition: all 0.3s;"
-                 onmouseover="this.style.fill='{c['highlight']}'; this.style.fillOpacity='0.3';"
-                 onmouseout="this.style.fill='transparent';"/>
-        <ellipse cx="165" cy="50" rx="8" ry="5" 
-                 fill="transparent" stroke="{c['stroke']}" stroke-width="1"
-                 class="anatomy-region" data-region="eyes"
-                 style="cursor: pointer; transition: all 0.3s;"
-                 onmouseover="this.style.fill='{c['highlight']}'; this.style.fillOpacity='0.3';"
-                 onmouseout="this.style.fill='transparent';"/>
-        
-        <!-- Heart -->
+        <ellipse cx="150" cy="50" rx="25" ry="20" fill="transparent" stroke="{c['stroke']}" stroke-width="1" stroke-dasharray="3,3"/>
+        <text x="150" y="55" text-anchor="middle" fill="{c['stroke']}" font-size="10">BRAIN</text>
+        <ellipse cx="135" cy="50" rx="8" ry="5" fill="transparent" stroke="{c['stroke']}" stroke-width="1"/>
+        <ellipse cx="165" cy="50" rx="8" ry="5" fill="transparent" stroke="{c['stroke']}" stroke-width="1"/>
         <path d="M140 150 C120 130 120 170 150 190 C180 170 180 130 160 150 Z"
-              fill="transparent" stroke="{c['stroke']}" stroke-width="1.5"
-              class="anatomy-region" data-region="heart"
-              style="cursor: pointer; transition: all 0.3s;"
-              onmouseover="this.style.fill='{c['highlight']}'; this.style.fillOpacity='0.3';"
-              onmouseout="this.style.fill='transparent';"/>
-        <text x="150" y="170" text-anchor="middle" fill="{c['stroke']}" font-size="8" 
-              style="pointer-events: none;">HEART</text>
-        
-        <!-- Lungs -->
-        <ellipse cx="120" cy="160" rx="20" ry="35" 
-                 fill="transparent" stroke="{c['stroke']}" stroke-width="1"
-                 class="anatomy-region" data-region="lungs"
-                 style="cursor: pointer; transition: all 0.3s;"
-                 onmouseover="this.style.fill='{c['highlight']}'; this.style.fillOpacity='0.3';"
-                 onmouseout="this.style.fill='transparent';"/>
-        <ellipse cx="180" cy="160" rx="20" ry="35" 
-                 fill="transparent" stroke="{c['stroke']}" stroke-width="1"
-                 class="anatomy-region" data-region="lungs"
-                 style="cursor: pointer; transition: all 0.3s;"
-                 onmouseover="this.style.fill='{c['highlight']}'; this.style.fillOpacity='0.3';"
-                 onmouseout="this.style.fill='transparent';"/>
-        
-        <!-- Hands -->
-        <ellipse cx="70" cy="280" rx="15" ry="20" 
-                 fill="transparent" stroke="{c['stroke']}" stroke-width="1"
-                 class="anatomy-region" data-region="hands"
-                 style="cursor: pointer; transition: all 0.3s;"
-                 onmouseover="this.style.fill='{c['highlight']}'; this.style.fillOpacity='0.3';"
-                 onmouseout="this.style.fill='transparent';"/>
-        <ellipse cx="230" cy="280" rx="15" ry="20" 
-                 fill="transparent" stroke="{c['stroke']}" stroke-width="1"
-                 class="anatomy-region" data-region="hands"
-                 style="cursor: pointer; transition: all 0.3s;"
-                 onmouseover="this.style.fill='{c['highlight']}'; this.style.fillOpacity='0.3';"
-                 onmouseout="this.style.fill='transparent';"/>
-        
-        <!-- Blood vessels (decorative) -->
+              fill="transparent" stroke="{c['stroke']}" stroke-width="1.5"/>
+        <text x="150" y="170" text-anchor="middle" fill="{c['stroke']}" font-size="8">HEART</text>
+        <ellipse cx="120" cy="160" rx="20" ry="35" fill="transparent" stroke="{c['stroke']}" stroke-width="1"/>
+        <ellipse cx="180" cy="160" rx="20" ry="35" fill="transparent" stroke="{c['stroke']}" stroke-width="1"/>
+        <ellipse cx="70" cy="280" rx="15" ry="20" fill="transparent" stroke="{c['stroke']}" stroke-width="1"/>
+        <ellipse cx="230" cy="280" rx="15" ry="20" fill="transparent" stroke="{c['stroke']}" stroke-width="1"/>
         <path d="M150 190 L150 280" stroke="{c['stroke']}" stroke-width="1" stroke-dasharray="2,2" fill="none"/>
-        <path d="M140 170 L100 200" stroke="{c['stroke']}" stroke-width="0.5" fill="none"/>
-        <path d="M160 170 L200 200" stroke="{c['stroke']}" stroke-width="0.5" fill="none"/>
-        
-        <!-- Blood label -->
-        <text x="150" y="250" text-anchor="middle" fill="{c['stroke']}" font-size="8"
-              class="anatomy-region" data-region="blood"
-              style="cursor: pointer;"
-              onmouseover="this.style.fontSize='9px'; this.style.fill='{c['highlight']}';"
-              onmouseout="this.style.fontSize='8px'; this.style.fill='{c['stroke']}';">
-            BLOOD
-        </text>
+        <text x="150" y="250" text-anchor="middle" fill="{c['stroke']}" font-size="8">BLOOD</text>
     </svg>
     '''
     return svg
@@ -801,26 +677,60 @@ def render_anatomy_diagram(pov: str, mode: str) -> str:
 
 # =============================================================================
 # SESSION STATE INITIALIZATION
+# BUG FIX: Using lists instead of sets for serialization safety
 # =============================================================================
 
 def init_session_state():
-    """Initialize all session state variables."""
     defaults = {
         "pov": None,
         "mode": "gaslight",
         "intensity": 2,
         "visit_count": 0,
-        "discovered_secrets": set(),
-        "examined_regions": set(),
-        "examined_specimens": set(),
+        "discovered_secrets": [],     # BUG FIX: list instead of set
+        "examined_regions": [],        # BUG FIX: list instead of set
+        "examined_specimens": [],      # BUG FIX: list instead of set
         "current_region": None,
         "show_intro": True,
         "random_seed": random.randint(0, 10000)
     }
-    
     for key, value in defaults.items():
         if key not in st.session_state:
             st.session_state[key] = value
+
+
+# =============================================================================
+# HELPER: add to list without duplicates
+# =============================================================================
+
+def add_to_list(lst: list, item) -> None:
+    """Add item to list if not already present (set-like behavior)."""
+    if item not in lst:
+        lst.append(item)
+
+
+# =============================================================================
+# HELPER: check and reveal secrets
+# =============================================================================
+
+def try_reveal_secrets():
+    """Check all secrets against current state and reveal any that match."""
+    pov = st.session_state.pov
+    mode = st.session_state.mode
+    intensity = st.session_state.intensity
+    regions = st.session_state.examined_regions
+    specimens = st.session_state.examined_specimens
+    visits = st.session_state.visit_count
+    revealed = []
+
+    for secret in SECRETS:
+        sid = secret["id"]
+        if sid in st.session_state.discovered_secrets:
+            continue
+        if check_secret_condition(secret, pov, mode, intensity, regions, specimens, visits):
+            add_to_list(st.session_state.discovered_secrets, sid)
+            revealed.append(secret)
+
+    return revealed
 
 
 # =============================================================================
@@ -828,41 +738,37 @@ def init_session_state():
 # =============================================================================
 
 def render_intro():
-    """Render the introduction screen."""
     st.markdown('<h1 class="main-title">The Anatomy Theatre</h1>', unsafe_allow_html=True)
     st.markdown('<p class="subtitle">An Immersive Experience</p>', unsafe_allow_html=True)
-    
-    # Epigraph
+
     epigraph = get_random_epigraph()
     st.markdown(f'<div class="epigraph">{epigraph}</div>', unsafe_allow_html=True)
-    
+
     st.markdown("---")
-    
-    # Controls
+
     col1, col2, col3 = st.columns([1, 2, 1])
-    
+
     with col2:
         st.markdown("### Choose Your Perspective")
-        
+
         pov_descriptions = {
             "The Observer": "Watch from the gallery. See what others miss.",
             "The Anatomist": "Wield the blade. Feel the power of revelation.",
             "The Investigator": "Search for truth among the secrets.",
             "The Subject": "Experience the table. Know the cold."
         }
-        
+
         pov_choice = st.radio(
             "Who are you tonight?",
             list(pov_descriptions.keys()),
             format_func=lambda x: f"{x}",
             label_visibility="collapsed"
         )
-        
+
         st.caption(pov_descriptions[pov_choice])
-        
+
         st.markdown("---")
-        
-        # Intensity
+
         intensity = st.slider(
             "Intensity",
             min_value=1,
@@ -871,9 +777,9 @@ def render_intro():
             help="How deep do you wish to go?"
         )
         st.caption(f"*{INTENSITY_NAMES[intensity]}*")
-        
+
         st.markdown("---")
-        
+
         if st.button("Enter the Theatre", use_container_width=True, type="primary"):
             pov_map = {
                 "The Observer": "observer",
@@ -889,28 +795,23 @@ def render_intro():
 
 
 def render_theatre():
-    """Render the main theatre experience."""
     pov = st.session_state.pov
     mode = st.session_state.mode
     intensity = st.session_state.intensity
-    
-    # Seed random for consistent ambient content within session
+
     random.seed(st.session_state.random_seed + st.session_state.visit_count)
-    
-    # Title
+
     pov_titles = {
         "observer": "THE OBSERVER",
         "anatomist": "THE ANATOMIST",
         "investigator": "THE INVESTIGATOR",
         "subject": "THE SUBJECT"
     }
-    
+
     st.markdown(f'<div class="pov-label">{pov_titles[pov]}</div>', unsafe_allow_html=True)
-    
-    # Controls in sidebar-like area
+
     with st.expander("⚙️ Theatre Controls", expanded=False):
         col1, col2, col3 = st.columns(3)
-        
         with col1:
             new_mode = st.selectbox(
                 "Visual Mode",
@@ -921,202 +822,159 @@ def render_theatre():
             if new_mode != mode:
                 st.session_state.mode = new_mode
                 st.rerun()
-        
         with col2:
-            new_intensity = st.slider(
-                "Intensity",
-                1, 5, intensity,
-                help=INTENSITY_NAMES[intensity]
-            )
+            new_intensity = st.slider("Intensity", 1, 5, intensity, help=INTENSITY_NAMES[intensity])
             if new_intensity != intensity:
                 st.session_state.intensity = new_intensity
                 st.rerun()
-        
         with col3:
             if st.button("Change Perspective"):
                 st.session_state.show_intro = True
                 st.rerun()
-    
+
     st.markdown("---")
-    
-    # Main content tabs
+
     tab1, tab2, tab3, tab4, tab5 = st.tabs(["🎭 3D Theatre", "🧪 Cabinet", "📜 The Scene", "🔬 Anatomy", "🗄️ Specimens"])
-    
+
     with tab1:
         render_3d_theatre(mode, intensity)
-    
     with tab2:
         render_cabinet(mode, intensity)
-    
     with tab3:
         render_scene(pov, mode, intensity)
-    
     with tab4:
         render_anatomy_tab(pov, mode)
-    
     with tab5:
         render_specimens_tab(pov, mode)
 
 
 def render_scene(pov: str, mode: str, intensity: int):
-    """Render the main narrative scene."""
-    
-    # Opening narration
     opening = get_opening(pov, mode)
     st.markdown(f'<div class="narration">{opening}</div>', unsafe_allow_html=True)
-    
     st.markdown("<br>", unsafe_allow_html=True)
-    
-    # Ambient sounds (intensity scaled)
+
     num_sounds = min(intensity, 3)
     for _ in range(num_sounds):
         sound = get_ambient_sound(intensity)
         st.markdown(f'<div class="ambient-sound">{sound}</div>', unsafe_allow_html=True)
-    
+
     st.markdown("<br>", unsafe_allow_html=True)
-    
-    # POV-specific observation
+
     observation = get_ambient_observation(pov)
-    st.markdown(f'<div class="narration" style="font-style: italic;">{observation}</div>', 
+    st.markdown(f'<div class="narration" style="font-style: italic;">{observation}</div>',
                 unsafe_allow_html=True)
-    
-    # Check for secrets at high intensity
-    if intensity >= 4:
-        for secret in SECRETS:
-            if not secret["discovered"] and "intensity 4" in secret["trigger"].lower():
-                if random.random() < 0.3:  # 30% chance per high-intensity view
-                    st.markdown("---")
-                    st.markdown(f'<div class="secret-reveal"><strong>Something catches your attention...</strong><br><br>{secret["content"]}</div>', 
-                                unsafe_allow_html=True)
-                    secret["discovered"] = True
-                    st.session_state.discovered_secrets.add(secret["id"])
-                    break
+
+    # BUG FIX: Use programmatic secret checking instead of substring matching
+    revealed = try_reveal_secrets()
+    for secret in revealed:
+        st.markdown("---")
+        st.markdown(
+            f'<div class="secret-reveal"><strong>Something catches your attention...</strong>'
+            f'<br><br>{secret["content"]}</div>',
+            unsafe_allow_html=True
+        )
 
 
 def render_anatomy_tab(pov: str, mode: str):
-    """Render the anatomy exploration tab."""
-    
     col1, col2 = st.columns([1, 1])
-    
+
     with col1:
         st.markdown("### The Subject")
         st.markdown(render_anatomy_diagram(pov, mode), unsafe_allow_html=True)
-        st.caption("*Click a region to examine*")
-    
+        st.caption("*Select a region to examine*")
+
     with col2:
         st.markdown("### Examination")
-        
-        # Region selector (since SVG clicks won't work in pure Streamlit)
         region = st.selectbox(
             "Select region to examine:",
             ["heart", "brain", "lungs", "hands", "eyes", "blood"],
             format_func=lambda x: x.title()
         )
-        
+
         if region:
-            st.session_state.examined_regions.add(region)
-            
-            # Layer tabs
+            add_to_list(st.session_state.examined_regions, region)
+
             layer_tab1, layer_tab2, layer_tab3 = st.tabs(["Medical", "Hidden", "Personal"])
-            
+
             with layer_tab1:
                 medical = get_anatomy_text(region, "medical", pov)
                 st.markdown(f'<div class="specimen-text">{medical}</div>', unsafe_allow_html=True)
-            
             with layer_tab2:
                 lore = get_anatomy_text(region, "lore", pov)
-                st.markdown(f'<div class="specimen-text" style="font-style: italic;">{lore}</div>', 
+                st.markdown(f'<div class="specimen-text" style="font-style: italic;">{lore}</div>',
                             unsafe_allow_html=True)
-            
             with layer_tab3:
                 emotional = get_anatomy_text(region, "emotional", pov)
                 st.markdown(f'<div class="specimen-text">{emotional}</div>', unsafe_allow_html=True)
-        
-        # Secret check: examine hands then eyes
-        if "hands" in st.session_state.examined_regions and "eyes" in st.session_state.examined_regions:
-            for secret in SECRETS:
-                if secret["id"] == "subject_identity" and not secret["discovered"]:
-                    st.markdown("---")
-                    st.markdown(f'<div class="secret-reveal">{secret["content"]}</div>', 
-                                unsafe_allow_html=True)
-                    secret["discovered"] = True
-                    st.session_state.discovered_secrets.add(secret["id"])
+
+        # BUG FIX: Use programmatic secret checking
+        revealed = try_reveal_secrets()
+        for secret in revealed:
+            st.markdown("---")
+            st.markdown(f'<div class="secret-reveal">{secret["content"]}</div>',
+                        unsafe_allow_html=True)
 
 
 def render_specimens_tab(pov: str, mode: str):
-    """Render the specimen cabinet tab."""
-    
     st.markdown("### The Specimen Cabinet")
     st.markdown("*Curiosities and evidence, preserved for posterity—or concealment.*")
-    
     st.markdown("---")
-    
+
     categories = ["anatomical", "documentary", "personal"]
     cat_names = {"anatomical": "🫀 Anatomical", "documentary": "📜 Documentary", "personal": "💍 Personal Effects"}
-    
     cat_tabs = st.tabs([cat_names[c] for c in categories])
-    
+
     for i, category in enumerate(categories):
         with cat_tabs[i]:
             specimens = get_specimens_by_category(category)
-            
             for specimen in specimens:
-                with st.container():
-                    st.markdown(f'<div class="specimen-card">', unsafe_allow_html=True)
-                    st.markdown(f'<div class="specimen-title">{specimen["name"]}</div>', unsafe_allow_html=True)
-                    st.markdown(f'<div class="specimen-text">{specimen["description"]}</div>', unsafe_allow_html=True)
-                    
-                    # Track examination
-                    specimen_id = f"{category}_{specimen['name']}"
-                    
-                    if st.button(f"Examine closely", key=f"examine_{specimen_id}"):
-                        st.session_state.examined_specimens.add(specimen_id)
-                        st.markdown(f'<div class="secret-reveal">{specimen["secret"]}</div>', 
-                                    unsafe_allow_html=True)
-                        specimen["discovered"] = True
-                    
-                    st.markdown('</div>', unsafe_allow_html=True)
-    
-    # Secret check: all categories examined
-    all_categories_checked = all(
-        any(f"{cat}_" in s for s in st.session_state.examined_specimens)
-        for cat in categories
-    )
-    
-    if all_categories_checked:
-        for secret in SECRETS:
-            if secret["id"] == "escape_route" and not secret["discovered"]:
-                st.markdown("---")
-                st.markdown(f'<div class="secret-reveal"><strong>A pattern emerges...</strong><br><br>{secret["content"]}</div>', 
-                            unsafe_allow_html=True)
-                secret["discovered"] = True
-                st.session_state.discovered_secrets.add(secret["id"])
+                specimen_id = f"{category}_{specimen['name']}"
+                is_examined = specimen_id in st.session_state.examined_specimens
+
+                if st.button(f"🔍 {specimen['name']}", key=f"examine_{specimen_id}"):
+                    add_to_list(st.session_state.examined_specimens, specimen_id)
+                    is_examined = True
+
+                # BUG FIX: Single markdown block for proper HTML nesting
+                secret_html = ""
+                if is_examined:
+                    secret_html = (
+                        f'<div class="secret-reveal" style="margin-top:0.8rem;">'
+                        f'🔍 {specimen["secret"]}</div>'
+                    )
+
+                st.markdown(
+                    f'<div class="specimen-card">'
+                    f'<div class="specimen-title">{specimen["name"]}</div>'
+                    f'<div class="specimen-text">{specimen["description"]}</div>'
+                    f'{secret_html}'
+                    f'</div>',
+                    unsafe_allow_html=True
+                )
+
+    # BUG FIX: Use programmatic secret checking
+    revealed = try_reveal_secrets()
+    for secret in revealed:
+        st.markdown("---")
+        st.markdown(
+            f'<div class="secret-reveal"><strong>A pattern emerges...</strong>'
+            f'<br><br>{secret["content"]}</div>',
+            unsafe_allow_html=True
+        )
 
 
 def render_3d_theatre(mode: str, intensity: int):
-    """Render the immersive 3D theatre experience."""
-    
     st.markdown("### Enter the Theatre")
     st.markdown("*An immersive view of the anatomical demonstration space.*")
-    
-    # Get the 3D HTML
     theatre_html = get_theatre_3d(mode, intensity)
-    
-    # Render using components.html for full-screen 3D
     import streamlit.components.v1 as components
     components.html(theatre_html, height=600, scrolling=False)
 
 
 def render_cabinet(mode: str, intensity: int):
-    """Render the interactive medical cabinet."""
-    
     st.markdown("### The Fitzroy Collection")
     st.markdown("*A private medical cabinet. What secrets do these bottles hold?*")
-    
-    # Get the cabinet HTML
     cabinet_html = get_cabinet_3d(mode, intensity)
-    
-    # Render using components.html
     import streamlit.components.v1 as components
     components.html(cabinet_html, height=650, scrolling=False)
 
@@ -1126,29 +984,25 @@ def render_cabinet(mode: str, intensity: int):
 # =============================================================================
 
 def main():
-    # Initialize session state
     init_session_state()
-    
-    # Apply theme CSS
     mode = st.session_state.mode
     st.markdown(THEMES.get(mode, GASLIGHT_CSS), unsafe_allow_html=True)
-    
-    # Apply intensity effects
     intensity = st.session_state.intensity
     st.markdown(get_intensity_css(intensity), unsafe_allow_html=True)
-    
-    # Render appropriate screen
+
     if st.session_state.show_intro or st.session_state.pov is None:
         render_intro()
     else:
         render_theatre()
-    
-    # Footer
+
     st.markdown("---")
+    discovered = len(st.session_state.discovered_secrets)
+    total = len(SECRETS)
     st.markdown(
-        '<p style="text-align: center; opacity: 0.5; font-size: 0.8rem;">'
-        'The Anatomy Theatre • A Crimson Rose Experience • 🌹'
-        '</p>',
+        f'<p style="text-align: center; opacity: 0.5; font-size: 0.8rem;">'
+        f'The Anatomy Theatre • A Crimson Rose Experience • 🌹 '
+        f'• Secrets discovered: {discovered}/{total}'
+        f'</p>',
         unsafe_allow_html=True
     )
 
