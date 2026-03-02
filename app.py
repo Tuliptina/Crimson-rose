@@ -4,10 +4,8 @@ An immersive, atmospheric exploration of a Victorian anatomy theatre.
 Tied to the world of The Crimson Rose series.
 
 BUG FIXES IMPLEMENTED:
-- Secret evaluation deferred to end of script execution to capture tab widget states
-- Secrets rendered globally via top-level placeholder container
-- Session state lists updated via strict reassignment
-- UI controls mapped to native session state keys
+- UI Lag Fix: SVG rendering now reads directly from the native widget `key` to ensure instantaneous highlight updates.
+- State Double-Binding Fix: Cleaned up st.toggle to rely natively on its key.
 """
 
 import streamlit as st
@@ -172,7 +170,7 @@ GASLIGHT_CSS = """
 }
 
 /* Streamlit overrides */
-.stSelectbox label, .stSlider label, .stRadio label {
+.stSelectbox label, .stSlider label, .stRadio label, .stToggle label {
     font-family: 'EB Garamond', serif !important;
     color: var(--text-secondary) !important;
 }
@@ -358,7 +356,7 @@ GOTHIC_CSS = """
 }
 
 /* Streamlit overrides */
-.stSelectbox label, .stSlider label, .stRadio label {
+.stSelectbox label, .stSlider label, .stRadio label, .stToggle label {
     font-family: 'Cormorant Garamond', serif !important;
     color: var(--text-secondary) !important;
 }
@@ -538,7 +536,7 @@ CLINICAL_CSS = """
 }
 
 /* Streamlit overrides */
-.stSelectbox label, .stSlider label, .stRadio label {
+.stSelectbox label, .stSlider label, .stRadio label, .stToggle label {
     font-family: 'Inter', sans-serif !important;
     color: var(--text-secondary) !important;
     font-weight: 500 !important;
@@ -656,8 +654,8 @@ def init_session_state():
         "examined_regions": [],
         "examined_specimens": [],
         "examined_table_items": [],
-        "selected_table_item": None,
-        "uv_active": False,
+        "table_item_selector": "heart",  # Natively track selection to prevent lag
+        "uv_toggle": False,              # Natively track toggle to prevent lag
         "current_region": None,
         "show_intro": True,
         "random_seed": random.randint(0, 10000)
@@ -668,7 +666,7 @@ def init_session_state():
 
 
 # =============================================================================
-# HELPER: add to list without duplicates (BUG FIX: Strict Array Reassignment)
+# HELPER: add to list without duplicates (Strict Array Reassignment)
 # =============================================================================
 
 def add_to_list(state_key: str, item) -> None:
@@ -814,7 +812,7 @@ def render_theatre():
     with tab3:
         render_dissection_table(pov, mode, intensity)
 
-    # BUG FIX: Evaluate secrets after the tabs have rendered to catch any widget interactions, 
+    # Evaluate secrets after the tabs have rendered to catch any widget interactions, 
     # but render the results back up into the secret_placeholder at the top of the UI.
     revealed = try_reveal_secrets()
     if revealed:
@@ -850,11 +848,10 @@ def render_dissection_table(pov: str, mode: str, intensity: int):
     st.markdown("*Marble slab. Drainage channels. The instruments of revelation arranged with surgical precision.*")
     st.markdown("---")
 
-    # UV toggle
+    # UV toggle — Relies purely on the built-in session state key
     col_uv, col_spacer = st.columns([1, 3])
     with col_uv:
-        uv_on = st.toggle("🔮 UV Lamp", value=st.session_state.uv_active, key="uv_toggle")
-        st.session_state.uv_active = uv_on
+        uv_on = st.toggle("🔮 UV Lamp", key="uv_toggle")
 
     # ── SVG Table rendered by theatre_2d_svg.py ──
     # Collect items for the selection panel
@@ -864,8 +861,9 @@ def render_dissection_table(pov: str, mode: str, intensity: int):
     col_table, col_exam = st.columns([3, 2])
 
     with col_table:
-        # Get the currently selected item for highlight ring
-        current_selection = st.session_state.get("selected_table_item", None)
+        # Read the current selection directly from the widget's native state key! 
+        # This fixes the lag issue, guaranteeing the highlight updates instantly.
+        current_selection = st.session_state.table_item_selector
 
         # Render the full composed dissection table SVG (base64 encoded)
         table_img = render_dissection_table_svg(
@@ -901,7 +899,6 @@ def render_dissection_table(pov: str, mode: str, intensity: int):
         )
 
         if selected_id:
-            st.session_state.selected_table_item = selected_id
             add_to_list("examined_table_items", selected_id)
 
             # Also track as examined_regions/specimens for secret triggers
