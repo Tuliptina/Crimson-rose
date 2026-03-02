@@ -689,3 +689,311 @@ def check_secret_condition(secret: dict, pov: str, mode: str, intensity: int,
             return False
 
     return True
+
+
+# =============================================================================
+# DISSECTION TABLE ITEMS
+# Unified data for the immersive dissection table interface.
+# Each item has: id, name, icon, category, position hints,
+# medical/lore/emotional text layers, UV reveals, and animation notes.
+# =============================================================================
+
+DISSECTION_TABLE_ITEMS = [
+    # ─── ORGANS (left side of table) ───
+    {
+        "id": "heart",
+        "name": "Human Heart",
+        "icon": "🫀",
+        "category": "organ",
+        "region_key": "heart",
+        "specimen_key": "anatomical_Preserved Heart (Item 23-A)",
+        "position": {"x": 180, "y": 220},
+        "animation": "double-throb",
+        "medical": "The heart: a hollow muscular organ, approximately the size of a closed fist, positioned slightly left of center in the thoracic cavity. Four chambers — two atria, two ventricles — maintain the circulation of blood. Vessels trail from the aortic arch like the roots of an inverted tree. This specimen shows unusual coloration — darker than expected, almost violet near the left ventricle.",
+        "lore": "Dr. Fitzroy's notation (recovered from the Black Book): 'The heart of Subject 23 showed unusual resistance to standard preservation techniques. Recommend investigation into blood type abnormalities. See also: Carlisle, S. — similar presentation.' A second annotation in different ink: 'The worthy heart persists. The unworthy dissolves. This is proof.'",
+        "emotional": {
+            "observer": "You watch the anatomist's blade circle the organ. Around you, students lean forward, hungry for knowledge. Or just hungry. The vessels trailing from the aortic arch look like roots reaching for soil that isn't there.",
+            "anatomist": "The heart resists you. They all do, at first. As if the body knows. As if it remembers how to fight. You have held one hundred and seven hearts. This is the first that made your own skip a beat.",
+            "investigator": "Hearts tell stories. This one speaks of struggle. The bruising pattern around the left ventricle suggests she was held down when the final dose was administered. Not consumption. Never consumption.",
+            "subject": "My heart. My heart. I gave it to him and he— he— it's still beating. Can you hear it? It's still beating. Why won't it stop?"
+        },
+        "uv_text": "Injection sites visible at the base of the aorta — three puncture marks in a triangular pattern. Consistent with Protocol Seven administration. Faint chemical residue fluoresces blue-green. Handwritten note in margin: 'VIABLE — flag for Carlisle comparison.'"
+    },
+    {
+        "id": "brain",
+        "name": "Brain",
+        "icon": "🧠",
+        "category": "organ",
+        "region_key": "brain",
+        "specimen_key": "anatomical_Brain in Spirits",
+        "position": {"x": 300, "y": 200},
+        "animation": "electrical-pulse",
+        "medical": "The brain: approximately 1.4 kilograms of neural tissue, protected by the skull and three membrane layers. Sulci and gyri form the characteristic folded landscape. This specimen shows notable asymmetry in the temporal lobes — the left significantly larger than expected. The cerebellum appears intact but discolored.",
+        "lore": "Fitzroy Protocol, Appendix C: 'Neurological examination of subjects exposed to Protocol compounds reveals accelerated degradation in memory-associated regions. The hippocampus dissolves first. Then the amygdala. The subject forgets fear before they forget love. This is considered a feature, not a defect.'",
+        "emotional": {
+            "observer": "The anatomist handles the brain with something approaching reverence. Or is it hunger? His fingers trace the folds like a cartographer mapping unknown territory.",
+            "anatomist": "Grey matter. White matter. The architecture of a soul, reduced to meat and electricity. Beautiful. And somewhere in these folds — the memory of a name, a face, a life. Now silent.",
+            "investigator": "Memory lives here. If only the dead could testify. If only they could name their killers. The hippocampal degradation is not natural — it matches the Protocol signature exactly.",
+            "subject": "The memories are going now. Slipping away like water through fingers. What was my name? What was my— there was a garden. Roses. Someone singing. Gone."
+        },
+        "uv_text": "Fitzroy's annotations visible along the corpus callosum in fluorescent ink: 'DEGRADATION RATE: 0.3mm/day. MEMORY LOSS: Complete by Day 12. CONSCIOUSNESS: Persists until Day 18. NOTE — Subject reported hearing music that was not present. Auditory hallucinations = promising indicator.'"
+    },
+    {
+        "id": "lungs",
+        "name": "Lungs (Pair)",
+        "icon": "🫁",
+        "category": "organ",
+        "region_key": "lungs",
+        "specimen_key": None,
+        "position": {"x": 180, "y": 310},
+        "animation": "inflate-deflate",
+        "medical": "The lungs: paired organs of respiration. Right lung: three lobes. Left lung: two lobes, smaller to accommodate the heart. This pair presents a striking contrast — the right lung is pink and healthy, while the left is blackened and shriveled. The cause of blackening is not consistent with consumption or coal dust exposure.",
+        "lore": "Anatomy Club Records, Entry 44: 'Subject acquired from St. Mary's Workhouse. Cause of death listed as consumption. Actual cause: suffocation. The distinction matters only to the paperwork. NOTE: Left lung treated with Protocol compound post-mortem. The blackening is chemical, not pathological.'",
+        "emotional": {
+            "observer": "Black spots on the tissue. The anatomist notes them for the students. 'London air,' he says. Everyone laughs. But you've seen London air damage. This is something else entirely.",
+            "anatomist": "The lungs collapse without the negative pressure of an intact thorax. A useful metaphor, perhaps. We all collapse when the pressure changes.",
+            "investigator": "These lungs tell two stories. One healthy, one destroyed. The blackened lung was treated with something. A chemical. Post-mortem experimentation. They're using the dead as laboratories.",
+            "subject": "I can't breathe. I can't— but I don't need to breathe anymore, do I? The air tastes like copper and something sweet. Laudanum. Always laudanum."
+        },
+        "uv_text": "Chemical formula visible on the blackened lung surface: C₁₇H₁₉NO₃ + [UNKNOWN COMPOUND]. The unknown compound fluoresces in a pattern resembling crystal growth. Notation: 'Warren Protocol — pulmonary application test #7. Result: TISSUE NECROSIS. Discontinue this vector.'"
+    },
+    {
+        "id": "eye",
+        "name": "Eye (Preserved)",
+        "icon": "👁️",
+        "category": "organ",
+        "region_key": "eyes",
+        "specimen_key": None,
+        "position": {"x": 300, "y": 310},
+        "animation": "pupil-dilation",
+        "medical": "The eye: a spherical organ approximately 24mm in diameter. This specimen is remarkably well-preserved, the iris still showing a vivid green coloration. The pupil is fixed and dilated — maximally so, suggesting atropine or belladonna exposure at the time of death. Vitreous humor is clouded but intact.",
+        "lore": "Red Rose Society Cipher (decoded): 'The eyes are removed before public demonstration. Protocol requires it. The students must not see what the subjects saw. They must not witness their own reflection in the vitreous humour. EXCEPTION: This specimen retained for Fitzroy's private collection. The green is... uncommon.'",
+        "emotional": {
+            "observer": "The subject's eye stares at nothing. At everything. You have the absurd, terrifying feeling that it can see you. That somewhere behind that clouded lens, something is still watching.",
+            "anatomist": "The eyes are problematic. They seem to watch, even in death. Best to cover them. For the audience's comfort. For my comfort. This one is green. Like—",
+            "investigator": "Someone preserved this eye separately. Carefully. Lovingly, almost. The dilated pupil means belladonna — the 'beautiful woman' poison. Used to make eyes appear larger. Used in photography studios.",
+            "subject": "I saw him. I saw his face. I saw— I saw— why can't I remember what I saw? The light was so bright. The flash of the camera. The flash of the blade."
+        },
+        "uv_text": "Traces of belladonna compound visible in the iris. The pupil, under UV, reveals a reflected image burned into the retina — too small to discern without magnification, but the shape suggests a human figure holding a camera. Beneath the specimen jar: 'T.B. — PRIVATE. DO NOT CATALOGUE.'"
+    },
+    {
+        "id": "skeletal_hand",
+        "name": "Skeletal Hand",
+        "icon": "🦴",
+        "category": "organ",
+        "region_key": "hands",
+        "specimen_key": "anatomical_Articulated Hand",
+        "position": {"x": 240, "y": 390},
+        "animation": "galvanic-twitch",
+        "medical": "The hand: 27 bones, 34 muscles, over 100 ligaments and tendons. This specimen is fully articulated, wired in anatomical position. The phalanges show callusing consistent with manual labor — seamstress or laundress work. The ring finger has been removed at the proximal phalanx. Post-mortem, judging by the clean cut.",
+        "lore": "PWS Pamphlet (recovered): 'They examine our hands and declare us suited for labor or beauty, for service or display. But whose hands built the galleries where they dissect us? Whose hands sewed the sheets they lay us upon? Whose hands will tear this rotten system down?'",
+        "emotional": {
+            "observer": "The subject's hands are callused. A working woman. Someone's daughter. Someone's mother, perhaps. The missing finger tells a story no one in this room wants to hear.",
+            "anatomist": "The hands tell profession. These belonged to a seamstress. The needle pricks are still visible. Extraordinary dexterity, once. Now mere demonstration material.",
+            "investigator": "Defense wounds under the remaining fingernails — skin cells. She fought back. And the missing ring finger — a wedding band removed post-mortem. Kept as a trophy. Or as proof of... acquisition.",
+            "subject": "My hands held children. Held lovers. Held hope. Now they hold nothing at all. But they twitch. Did you see? They twitched. The galvanic current makes them dance."
+        },
+        "uv_text": "Bone cataloguing numbers visible on each phalanx in fluorescent ink: F-23-VII through F-23-XXVII. A complete set. Catalogued before death? The numbering system matches Fitzroy's private collection index. On the missing finger's stump: a tiny engraved rose."
+    },
+
+    # ─── INSTRUMENTS (right side of table) ───
+    {
+        "id": "bone_saw",
+        "name": "Bone Saw",
+        "icon": "🪚",
+        "category": "instrument",
+        "region_key": None,
+        "specimen_key": None,
+        "position": {"x": 600, "y": 220},
+        "animation": "steel-glint",
+        "medical": "A surgical bone saw, approximately 14 inches in length. The blade shows a fine-toothed pattern designed for clean transverse cuts through compact bone. Well-maintained, recently sharpened. The handle is rosewood with brass fittings — an expensive instrument, likely custom-commissioned.",
+        "lore": "This saw bears the maker's mark of Heinrich Müller, Berlin — one of only twelve produced for the Red Rose Society's founding members. Each handle is unique. This one has been used more than any other. The dark flecks in the teeth are not rust.",
+        "emotional": {
+            "observer": "The saw catches the gaslight and throws it back in fragments. Beautiful and terrible. The anatomist reaches for it with the familiarity of a violinist lifting their bow.",
+            "anatomist": "My saw. My instrument. Müller made it to my specifications — the weight, the balance, the tooth pattern. It has never failed me. It has never hesitated.",
+            "investigator": "Custom-made. Expensive. The dark material between the teeth — I need a sample. If it's blood, it can be tested. If it matches the missing women—",
+            "subject": "The sound. Oh God, the sound. Metal on bone. The vibration travels through the table and into what's left of me. I can feel it. I can still feel it."
+        },
+        "uv_text": "The blade fluoresces with residue from at least four distinct biological sources. The handle bears an engraved inscription visible only under UV: 'TO THE WORTHY — R.R.S. 1881.' One of the brass fittings conceals a hollow compartment."
+    },
+    {
+        "id": "scalpel",
+        "name": "Scalpel (#4, Missing #3)",
+        "icon": "🔪",
+        "category": "instrument",
+        "region_key": None,
+        "specimen_key": None,
+        "position": {"x": 700, "y": 220},
+        "animation": "red-edge-line",
+        "medical": "A #4 surgical scalpel with a fixed blade. The instrument tray shows spaces for a matched set of five; the #3 scalpel is conspicuously absent. The remaining blade is honed to extraordinary sharpness — the edge catches light as a thin red line. Recent use evident from faint discoloration near the bolster.",
+        "lore": "The missing #3 scalpel has not been seen since the night of Sebastian Carlisle's arrest. It was his preferred instrument — smaller, more precise, suited to the delicate work he favoured over Fitzroy's brute methodology. Some say he took it with him. Others say it was taken from him.",
+        "emotional": {
+            "observer": "Four scalpels in a case designed for five. The empty slot is more eloquent than any of the instruments beside it. Someone is missing from this set. Someone who isn't coming back.",
+            "anatomist": "Carlisle's scalpel. I should have replaced it. Filled the gap. But the empty space serves as a reminder. Every set has its defector. Every order, its Judas.",
+            "investigator": "The missing scalpel. Carlisle's instrument. If I can find it, it may still carry evidence. His fingerprints. His victims' blood. Or proof that he was the only one who tried to stop this.",
+            "subject": "The blade is so thin. So precise. You almost don't feel it. Almost. A line of fire, then cold. Then nothing."
+        },
+        "uv_text": "The #4 blade shows a message etched near the tang, visible only under UV: 'S.C. — I KEPT YOUR PLACE.' The empty slot in the case has fingerprint residue — not the anatomist's. Smaller hands. A woman's hands."
+    },
+    {
+        "id": "retractors",
+        "name": "Surgical Retractors",
+        "icon": "⚙️",
+        "category": "instrument",
+        "region_key": None,
+        "specimen_key": None,
+        "position": {"x": 600, "y": 310},
+        "animation": "slow-open-close",
+        "medical": "A pair of self-retaining retractors, designed to hold open an incision site during extended examination. The ratchet mechanism allows precise adjustment. These are an older model — the modern Balfour design has largely replaced them — suggesting the anatomist prefers tradition over innovation.",
+        "lore": "These retractors were used during the Warren Protocol's first human trial. The ratchet mechanism was modified to operate silently — the original clicking sound caused 'undesirable responses in conscious subjects.' The modification order was signed by Dr. Edmund Fitzroy, Alistair's father.",
+        "emotional": {
+            "observer": "The retractors open and close with mechanical patience. They don't care what they hold apart. Skin, muscle, the truth — all yield to sufficient pressure.",
+            "anatomist": "Father's retractors. Modified to his specifications. Silent operation. He understood that the sounds disturb more than the sights. The body can accept what the ears cannot.",
+            "investigator": "Modified for silent operation. Why would surgical retractors need to be silent? Unless the subjects could hear them. Unless the subjects were—",
+            "subject": "They're opening me. Layer by layer. I am a book and they are reading me and I cannot close my covers."
+        },
+        "uv_text": "Serial number matches Edmund Fitzroy's personal surgical inventory, item #F-E-034. The ratchet mechanism shows traces of a paralytic compound in its joints — not for the patient. For the instrument itself. Someone tried to jam it. Someone fought back."
+    },
+    {
+        "id": "suture_needle",
+        "name": "Suture Needle & Catgut",
+        "icon": "🪡",
+        "category": "instrument",
+        "region_key": None,
+        "specimen_key": None,
+        "position": {"x": 700, "y": 310},
+        "animation": "thread-sway",
+        "medical": "A curved suture needle threaded with catgut. The catgut is genuine — processed sheep intestine, not the modern chromic variety. The needle is half-circle pattern, appropriate for deep tissue closure. Oddly, it appears unused despite being threaded and ready.",
+        "lore": "Suturing is the anatomist's final act — closing what was opened, restoring the illusion of wholeness. But this needle has never been used in this theatre. It sits ready for a purpose no one speaks of: the subjects that must be returned looking... undisturbed.",
+        "emotional": {
+            "observer": "The thread sways in the faintest draft. A pendulum measuring time in a place where time has stopped mattering. Ready to close. Ready to seal. Ready to pretend none of this happened.",
+            "anatomist": "Thread and needle. The tools of concealment. When we're done, they go back. Stitched. Dressed. Returned. And no one asks why Aunt Mary looks different at the viewing.",
+            "investigator": "An unused suture kit at a dissection theatre. This isn't for demonstration — it's for cleanup. They sew them back up. They return the bodies. The families never know what was done.",
+            "subject": "Will they sew me back together? Will they make me whole again? Will anyone be able to tell? Will my mother know?"
+        },
+        "uv_text": "The catgut thread fluoresces differently than standard surgical material — it's been treated with the same compound found in the Black Book's 'concealment protocol.' Bodies sutured with this thread show no visible scarring within 48 hours. The perfect cover."
+    },
+    {
+        "id": "magnifying_lens",
+        "name": "Magnifying Lens",
+        "icon": "🔍",
+        "category": "instrument",
+        "region_key": None,
+        "specimen_key": None,
+        "position": {"x": 650, "y": 390},
+        "animation": "light-refraction",
+        "medical": "A brass-mounted magnifying lens, 3x magnification, with a handle worn smooth by decades of use. The lens is crystal — not glass — offering superior clarity. A small crack runs through the lower quadrant, creating a prismatic effect.",
+        "lore": "This lens belonged to Dr. Edmund Fitzroy before his son inherited it. Under its magnification, the elder Fitzroy first identified the 'crimson thread' — the anomalous blood factor that would become the Society's obsession. The crack appeared the night Edmund died. Alistair has never repaired it.",
+        "emotional": {
+            "observer": "Through the lens, everything becomes more. More detailed. More real. More terrible. Some truths are better viewed from a distance.",
+            "anatomist": "Father's lens. The crack is a feature now, not a flaw. It splits the image — shows you two truths at once. The medical and the personal. The science and the sin.",
+            "investigator": "The prismatic crack. When you look through it at the right angle, text that appears solid breaks apart into layers. Hidden messages beneath visible ones. A cipher tool disguised as a medical instrument.",
+            "subject": "Don't look at me through that. Don't magnify me. I am already too seen. I am already too exposed. Let me be small again. Let me disappear."
+        },
+        "uv_text": "The lens frame bears microscopic engraving visible only under UV magnification: a complete list of 23 names. The first is 'Edmund Fitzroy.' The last is 'Alistair Fitzroy.' Between them — the 21 founding members of the Red Rose Society. Three names have been crossed out. One is Sebastian Carlisle."
+    },
+
+    # ─── ATMOSPHERIC DETAILS (scattered around table) ───
+    {
+        "id": "pocket_watch",
+        "name": "Pocket Watch",
+        "icon": "⌚",
+        "category": "detail",
+        "region_key": None,
+        "specimen_key": "personal_Tarnished Locket",
+        "position": {"x": 450, "y": 480},
+        "animation": "ticking",
+        "medical": "A gentleman's pocket watch, silver case, hunter style. The mechanism is visible through a glass back. Currently running, though the time displayed does not correspond to any reasonable hour. The winding crown shows heavy wear suggesting obsessive adjustment.",
+        "lore": "The watch runs backwards in the gothic light. Not a malfunction — a modification. The watchmaker who altered it was found in the Thames three days later. The watch was commissioned by someone who wanted to measure how long the Protocol takes. Counting down, not up.",
+        "emotional": {
+            "observer": "Tick. Tick. Tick. The watch measures something, but not time. Not any time you recognize. The hands move in the wrong direction and somehow that feels more honest.",
+            "anatomist": "My father's watch. It has never kept correct time. I've come to prefer it that way. Correct time is for people who believe in progress. I believe in cycles.",
+            "investigator": "The watch runs backwards. A timer, counting down to something. The inscription inside the case will tell me whose it is. If I can get close enough—",
+            "subject": "Time. Is there still time? The ticking sounds like a heartbeat. Like my heartbeat. Slowing. Slowing. Slow—"
+        },
+        "uv_text": "Inside the case lid, an inscription fluoresces: 'FOR A.F. — MEASURE TWICE, CUT ONCE. — E.F.' Edmund to Alistair. The glass back reveals the mechanism has been modified with a secondary gear train. It's counting something specific: the watch resets every 18 days. The length of the Protocol."
+    },
+    {
+        "id": "handwritten_note",
+        "name": "Handwritten Note (Bleeding Ink)",
+        "icon": "📝",
+        "category": "detail",
+        "region_key": None,
+        "specimen_key": "documentary_Black Book Fragment",
+        "position": {"x": 350, "y": 120},
+        "animation": "ink-bleed",
+        "medical": "A fragment of heavy writing paper, partially obscured by spreading ink. The handwriting is educated but hurried — a physician's hand under stress. Some words are legible; others have been consumed by the bleeding ink. The paper stock matches that used in the Black Book.",
+        "lore": "Legible fragments: '...cannot continue this... the Warren Protocol must be... Carlisle was right about the... God forgive me, I have seen what... the women deserve...' The ink bleeds outward as if trying to escape the words it carries. The note was found tucked beneath the dissection table's drainage tray.",
+        "emotional": {
+            "observer": "The ink is still spreading. Still running. As if the words themselves are trying to flee the page. You catch fragments — 'cannot continue' — 'Carlisle was right' — 'God forgive me.'",
+            "anatomist": "I wrote this. Last night. Or last week. The dates blur. The ink runs because my hand was shaking. It hasn't stopped shaking since I saw what the Protocol does at day sixteen.",
+            "investigator": "Evidence. Written in the anatomist's own hand. Partial confession. If I can preserve this before the ink destroys the remaining words—",
+            "subject": "Someone wrote about me. About what happened. The ink bleeds like I bled. The words dissolve like I dissolved. At least someone tried to say something."
+        },
+        "uv_text": "Beneath the bleeding ink, the UV reveals the original complete text — the ink was deliberately smeared to obscure it. The full note reads: 'The Warren Protocol must be stopped. Subject 23 remained conscious throughout. She spoke my name. She knew me. I cannot continue this. Carlisle was right about the crimson thread — it is not a gift. It is a curse. God forgive me, I have seen what we have become. The women deserve justice. —A.F.'"
+    },
+    {
+        "id": "candle",
+        "name": "Tallow Candle",
+        "icon": "🕯️",
+        "category": "detail",
+        "region_key": None,
+        "specimen_key": None,
+        "position": {"x": 100, "y": 100},
+        "animation": "flame-flicker",
+        "medical": "A tallow candle, approximately 40% consumed, set in a brass holder. The flame burns with unusual steadiness given the theatre's draughts. Wax has pooled and solidified in layered formations down the brass stem. The tallow composition is non-standard — the rendering smells wrong.",
+        "lore": "The candles in this theatre are rendered from a specific tallow blend maintained by the Society since 1847. The fat source has never been officially documented. The flame burns longer and steadier than standard tallow. The Society considers their candles a point of pride. No one asks about the rendering process.",
+        "emotional": {
+            "observer": "The flame won't die. Despite the cold, despite the draught from the gallery, it burns on. The light cone it casts makes everything within its reach look like a painting. Everything outside — shadow.",
+            "anatomist": "The candles are always lit when I arrive. I've never seen who lights them. I've stopped asking. Some traditions in this place predate questions.",
+            "investigator": "The tallow smells wrong. Too sweet. Standard candles are rendered from beef or mutton fat. This is something else. I don't want to think about what it might be. I have to think about what it might be.",
+            "subject": "The flame is warm. The only warm thing left. It dances like it's alive. Like it's the only living thing in this room. Except— except I'm still—"
+        },
+        "uv_text": "The wax pooling on the brass holder has trapped several strands of hair — invisible to the naked eye but fluorescing under UV. Human hair. Multiple sources. The brass holder itself bears an engraving: a rose, and beneath it, the number 23."
+    },
+    {
+        "id": "blood_spots",
+        "name": "Blood Spots (Oxidizing)",
+        "icon": "🩸",
+        "category": "detail",
+        "region_key": None,
+        "specimen_key": None,
+        "position": {"x": 450, "y": 300},
+        "animation": "oxidation-darken",
+        "medical": "Several drops of blood on the marble surface, in various stages of oxidation. The freshest are bright crimson; the oldest have darkened to near-black. The distribution pattern suggests multiple procedures over time — the marble is porous and has absorbed generations of evidence.",
+        "lore": "The marble of this table has never been replaced, despite numerous requests. The Society considers the accumulated blood a form of consecration. 'Each drop is a lesson learned,' reads the Anatomy Club charter. 'Each stain, a truth revealed.' The oldest stains date to the table's installation in 1843.",
+        "emotional": {
+            "observer": "The blood spots form a constellation on the marble. You could chart them like stars. Name them. Each one is a person. Each one was someone.",
+            "anatomist": "I used to scrub the table between sessions. Now I don't. The stains have become a map of my career. My history, written in other people's blood.",
+            "investigator": "Blood evidence. Layered in the marble like geological strata. If forensic science advances far enough, every drop could identify a victim. Every stain could name a name.",
+            "subject": "My blood joins the others. Mixing. Merging. I am part of this table now. Part of its history. One more stain among hundreds. One more name that will be forgotten."
+        },
+        "uv_text": "Under UV, the blood spots reveal a hidden pattern — they've been deliberately arranged around a central point to form the shape of a five-petalled rose. Not random spillage. A ritual. The central spot, the oldest and darkest, fluoresces differently from the others. It's not human blood."
+    },
+    {
+        "id": "red_rose",
+        "name": "Red Rose (Wilting)",
+        "icon": "🌹",
+        "category": "detail",
+        "region_key": None,
+        "specimen_key": "personal_Romani Amulet",
+        "position": {"x": 750, "y": 480},
+        "animation": "petal-wilt",
+        "medical": "A single red rose, variety Rosa gallica, placed at the corner of the dissection table. The petals are in mid-wilt — edges curling brown, but the center still holds its crimson depth. Three petals have fallen to the marble surface. The thorns have been removed with surgical precision.",
+        "lore": "A rose is placed on the table before every session. No one admits to placing it. The tradition predates the current anatomist, the previous one, and possibly the theatre itself. The rose is always Red — never white, never pink. It is always wilting. It is never fresh. As if it was cut days before anyone knew a demonstration would occur.",
+        "emotional": {
+            "observer": "Three petals fallen. Three women missing this month. Coincidence is a word for people who haven't been paying attention. The rose watches you as much as you watch it.",
+            "anatomist": "I find it every time. Already wilting. Already dying. Like everything in this room. I've stopped removing it. It belongs here more than I do.",
+            "investigator": "The Crimson Rose. The Society's mark. Left in plain sight like a signature on a crime scene. They're not hiding anymore. They're boasting. Daring someone to connect the thorns.",
+            "subject": "A rose for me? How kind. How terribly, terribly kind. It's dying too. We match. We are the same. Fading crimson on cold marble."
+        },
+        "uv_text": "The rose petals fluoresce a deep, impossible crimson under UV — far brighter than any natural pigment. The fallen petals, arranged on the marble, spell three letters: R. R. S. The stem, stripped of thorns, bears microscopic text: 'THE WARREN PROTOCOL CONTINUES.'"
+    },
+]
+
+
+def get_dissection_table_items(category: str = None) -> list:
+    """Get dissection table items, optionally filtered by category."""
+    if category:
+        return [i for i in DISSECTION_TABLE_ITEMS if i["category"] == category]
+    return DISSECTION_TABLE_ITEMS
