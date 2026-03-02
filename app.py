@@ -15,8 +15,8 @@ import random
 from content import (
     get_opening, get_ambient_sound, get_ambient_observation,
     get_anatomy_text, get_random_epigraph, get_specimens_by_category,
-    check_secret_condition,
-    ANATOMY_REGIONS, SPECIMENS, SECRETS
+    get_dissection_table_items, check_secret_condition,
+    ANATOMY_REGIONS, SPECIMENS, SECRETS, DISSECTION_TABLE_ITEMS
 )
 from theatre_3d import get_theatre_3d
 
@@ -642,40 +642,6 @@ def get_intensity_css(intensity: int) -> str:
 
 
 # =============================================================================
-# ANATOMY DIAGRAM (Interactive SVG)
-# =============================================================================
-
-def render_anatomy_diagram(pov: str, mode: str) -> str:
-    colors = {
-        "gaslight": {"stroke": "#d4a574", "fill": "#2c1810", "highlight": "#d4a574"},
-        "gothic": {"stroke": "#8b0000", "fill": "#1a0a0a", "highlight": "#cc0000"},
-        "clinical": {"stroke": "#2f4f4f", "fill": "#ffffff", "highlight": "#3d6b6b"}
-    }
-    c = colors.get(mode, colors["gaslight"])
-    svg = f'''
-    <svg viewBox="0 0 300 500" style="max-width: 300px; margin: 0 auto; display: block;">
-        <ellipse cx="150" cy="60" rx="40" ry="50" fill="{c['fill']}" stroke="{c['stroke']}" stroke-width="2"/>
-        <path d="M110 100 L90 250 L110 280 L140 300 L160 300 L190 280 L210 250 L190 100 Z"
-              fill="{c['fill']}" stroke="{c['stroke']}" stroke-width="2"/>
-        <ellipse cx="150" cy="50" rx="25" ry="20" fill="transparent" stroke="{c['stroke']}" stroke-width="1" stroke-dasharray="3,3"/>
-        <text x="150" y="55" text-anchor="middle" fill="{c['stroke']}" font-size="10">BRAIN</text>
-        <ellipse cx="135" cy="50" rx="8" ry="5" fill="transparent" stroke="{c['stroke']}" stroke-width="1"/>
-        <ellipse cx="165" cy="50" rx="8" ry="5" fill="transparent" stroke="{c['stroke']}" stroke-width="1"/>
-        <path d="M140 150 C120 130 120 170 150 190 C180 170 180 130 160 150 Z"
-              fill="transparent" stroke="{c['stroke']}" stroke-width="1.5"/>
-        <text x="150" y="170" text-anchor="middle" fill="{c['stroke']}" font-size="8">HEART</text>
-        <ellipse cx="120" cy="160" rx="20" ry="35" fill="transparent" stroke="{c['stroke']}" stroke-width="1"/>
-        <ellipse cx="180" cy="160" rx="20" ry="35" fill="transparent" stroke="{c['stroke']}" stroke-width="1"/>
-        <ellipse cx="70" cy="280" rx="15" ry="20" fill="transparent" stroke="{c['stroke']}" stroke-width="1"/>
-        <ellipse cx="230" cy="280" rx="15" ry="20" fill="transparent" stroke="{c['stroke']}" stroke-width="1"/>
-        <path d="M150 190 L150 280" stroke="{c['stroke']}" stroke-width="1" stroke-dasharray="2,2" fill="none"/>
-        <text x="150" y="250" text-anchor="middle" fill="{c['stroke']}" font-size="8">BLOOD</text>
-    </svg>
-    '''
-    return svg
-
-
-# =============================================================================
 # SESSION STATE INITIALIZATION
 # =============================================================================
 
@@ -688,6 +654,9 @@ def init_session_state():
         "discovered_secrets": [],
         "examined_regions": [],
         "examined_specimens": [],
+        "examined_table_items": [],
+        "selected_table_item": None,
+        "uv_active": False,
         "current_region": None,
         "show_intro": True,
         "random_seed": random.randint(0, 10000)
@@ -835,16 +804,14 @@ def render_theatre():
     # Global placeholder to render newly discovered secrets above the tabs
     secret_placeholder = st.container()
 
-    tab1, tab2, tab3, tab4 = st.tabs(["🎭 3D Theatre", "📜 The Scene", "🔬 Anatomy", "🗄️ Specimens"])
+    tab1, tab2, tab3 = st.tabs(["🎭 3D Theatre", "📜 The Scene", "🔪 Dissection Table"])
 
     with tab1:
         render_3d_theatre(mode, intensity)
     with tab2:
         render_scene(pov, mode, intensity)
     with tab3:
-        render_anatomy_tab(pov, mode)
-    with tab4:
-        render_specimens_tab(pov, mode)
+        render_dissection_table(pov, mode, intensity)
 
     # BUG FIX: Evaluate secrets after the tabs have rendered to catch any widget interactions, 
     # but render the results back up into the secret_placeholder at the top of the UI.
@@ -876,74 +843,178 @@ def render_scene(pov: str, mode: str, intensity: int):
                 unsafe_allow_html=True)
 
 
-def render_anatomy_tab(pov: str, mode: str):
-    col1, col2 = st.columns([1, 1])
-
-    with col1:
-        st.markdown("### The Subject")
-        st.markdown(render_anatomy_diagram(pov, mode), unsafe_allow_html=True)
-        st.caption("*Select a region to examine*")
-
-    with col2:
-        st.markdown("### Examination")
-        region = st.selectbox(
-            "Select region to examine:",
-            ["heart", "brain", "lungs", "hands", "eyes", "blood"],
-            format_func=lambda x: x.title()
-        )
-
-        if region:
-            add_to_list("examined_regions", region)
-
-            layer_tab1, layer_tab2, layer_tab3 = st.tabs(["Medical", "Hidden", "Personal"])
-
-            with layer_tab1:
-                medical = get_anatomy_text(region, "medical", pov)
-                st.markdown(f'<div class="specimen-text">{medical}</div>', unsafe_allow_html=True)
-            with layer_tab2:
-                lore = get_anatomy_text(region, "lore", pov)
-                st.markdown(f'<div class="specimen-text" style="font-style: italic;">{lore}</div>',
-                            unsafe_allow_html=True)
-            with layer_tab3:
-                emotional = get_anatomy_text(region, "emotional", pov)
-                st.markdown(f'<div class="specimen-text">{emotional}</div>', unsafe_allow_html=True)
-
-
-def render_specimens_tab(pov: str, mode: str):
-    st.markdown("### The Specimen Cabinet")
-    st.markdown("*Curiosities and evidence, preserved for posterity—or concealment.*")
+def render_dissection_table(pov: str, mode: str, intensity: int):
+    """Render the immersive dissection table — SVG + examination panel."""
+    st.markdown("### The Dissection Table")
+    st.markdown("*Marble slab. Drainage channels. The instruments of revelation arranged with surgical precision.*")
     st.markdown("---")
 
-    categories = ["anatomical", "documentary", "personal"]
-    cat_names = {"anatomical": "🫀 Anatomical", "documentary": "📜 Documentary", "personal": "💍 Personal Effects"}
-    cat_tabs = st.tabs([cat_names[c] for c in categories])
+    # UV toggle
+    col_uv, col_spacer = st.columns([1, 3])
+    with col_uv:
+        uv_on = st.toggle("🔮 UV Lamp", value=st.session_state.uv_active, key="uv_toggle")
+        st.session_state.uv_active = uv_on
 
-    for i, category in enumerate(categories):
-        with cat_tabs[i]:
-            specimens = get_specimens_by_category(category)
-            for specimen in specimens:
-                specimen_id = f"{category}_{specimen['name']}"
-                is_examined = specimen_id in st.session_state.examined_specimens
+    # ── SVG Table (will be rendered by theatre_2d_svg.py in next phase) ──
+    # For now, placeholder that proves the tab works and state flows correctly
+    import streamlit.components.v1 as components
 
-                if st.button(f"🔍 {specimen['name']}", key=f"examine_{specimen_id}"):
-                    add_to_list("examined_specimens", specimen_id)
-                    is_examined = True
+    # Collect items for the table
+    table_items = get_dissection_table_items()
 
-                secret_html = ""
-                if is_examined:
-                    secret_html = (
-                        f'<div class="secret-reveal" style="margin-top:0.8rem;">'
-                        f'🔍 {specimen["secret"]}</div>'
+    # Item categories for the selection panel
+    organs = [i for i in table_items if i["category"] == "organ"]
+    instruments = [i for i in table_items if i["category"] == "instrument"]
+    details = [i for i in table_items if i["category"] == "detail"]
+
+    # ── Layout: SVG left, examination panel right ──
+    col_table, col_exam = st.columns([3, 2])
+
+    with col_table:
+        # PLACEHOLDER: This will become the full interactive SVG
+        # rendered via components.html() from theatre_2d_svg.py
+        mode_colors = {
+            "gaslight": {"bg": "#2c1810", "marble": "#8a7d6b", "accent": "#d4a574", "channel": "#6b5a3e"},
+            "gothic": {"bg": "#1a0a0a", "marble": "#2a1a1a", "accent": "#8b0000", "channel": "#4a0000"},
+            "clinical": {"bg": "#f5f5f0", "marble": "#e8e4dc", "accent": "#2f4f4f", "channel": "#c0c0c0"},
+        }
+        c = mode_colors.get(mode, mode_colors["gaslight"])
+        uv_filter = ""
+        if uv_on:
+            uv_filter = f'''
+                <rect width="900" height="600" fill="rgba(20,0,60,0.85)" />
+                <text x="450" y="300" text-anchor="middle" fill="#7b68ee"
+                      font-size="18" font-family="serif" opacity="0.7">
+                    UV ACTIVE — Hidden marks revealed
+                </text>
+                <text x="450" y="340" text-anchor="middle" fill="#9370db"
+                      font-size="12" font-family="serif" font-style="italic" opacity="0.5">
+                    THE WARREN PROTOCOL CONTINUES
+                </text>
+            '''
+
+        placeholder_svg = f'''
+        <svg viewBox="0 0 900 600" xmlns="http://www.w3.org/2000/svg"
+             style="width:100%; background:{c['bg']}; border-radius:4px;">
+            <!-- Table surface -->
+            <rect x="50" y="50" width="800" height="500" rx="8"
+                  fill="{c['marble']}" stroke="{c['accent']}" stroke-width="2" opacity="0.9"/>
+            <!-- Drainage channels -->
+            <line x1="150" y1="60" x2="150" y2="540" stroke="{c['channel']}" stroke-width="3" opacity="0.6"/>
+            <line x1="450" y1="60" x2="450" y2="540" stroke="{c['channel']}" stroke-width="3" opacity="0.6"/>
+            <line x1="750" y1="60" x2="750" y2="540" stroke="{c['channel']}" stroke-width="3" opacity="0.6"/>
+            <line x1="60" y1="300" x2="840" y2="300" stroke="{c['channel']}" stroke-width="2" opacity="0.4"/>
+            <!-- Region labels -->
+            <text x="250" y="180" text-anchor="middle" fill="{c['accent']}" font-size="14"
+                  font-family="serif" opacity="0.8">— ORGANS —</text>
+            <text x="650" y="180" text-anchor="middle" fill="{c['accent']}" font-size="14"
+                  font-family="serif" opacity="0.8">— INSTRUMENTS —</text>
+            <text x="450" y="450" text-anchor="middle" fill="{c['accent']}" font-size="14"
+                  font-family="serif" opacity="0.8">— PERSONAL EFFECTS —</text>
+            <!-- Organ placeholders -->
+            <text x="200" y="240" text-anchor="middle" fill="{c['accent']}" font-size="20" opacity="0.6">🫀</text>
+            <text x="300" y="240" text-anchor="middle" fill="{c['accent']}" font-size="20" opacity="0.6">🧠</text>
+            <text x="200" y="310" text-anchor="middle" fill="{c['accent']}" font-size="20" opacity="0.6">🫁</text>
+            <text x="300" y="310" text-anchor="middle" fill="{c['accent']}" font-size="20" opacity="0.6">👁️</text>
+            <text x="250" y="380" text-anchor="middle" fill="{c['accent']}" font-size="20" opacity="0.6">🦴</text>
+            <!-- Instrument placeholders -->
+            <text x="600" y="240" text-anchor="middle" fill="{c['accent']}" font-size="18" opacity="0.6">🪚</text>
+            <text x="700" y="240" text-anchor="middle" fill="{c['accent']}" font-size="18" opacity="0.6">🔪</text>
+            <text x="600" y="310" text-anchor="middle" fill="{c['accent']}" font-size="18" opacity="0.6">🪡</text>
+            <text x="700" y="310" text-anchor="middle" fill="{c['accent']}" font-size="18" opacity="0.6">🔍</text>
+            <!-- Detail placeholders -->
+            <text x="350" y="500" text-anchor="middle" fill="{c['accent']}" font-size="18" opacity="0.6">🕯️</text>
+            <text x="450" y="500" text-anchor="middle" fill="{c['accent']}" font-size="18" opacity="0.6">⌚</text>
+            <text x="550" y="500" text-anchor="middle" fill="{c['accent']}" font-size="18" opacity="0.6">🌹</text>
+            <!-- Waiting text -->
+            <text x="450" y="40" text-anchor="middle" fill="{c['accent']}" font-size="11"
+                  font-family="serif" font-style="italic" opacity="0.5">
+                Select an item below to examine — full SVG rendering coming soon
+            </text>
+            {uv_filter}
+        </svg>
+        '''
+        st.markdown(placeholder_svg, unsafe_allow_html=True)
+
+    with col_exam:
+        st.markdown("#### Examination")
+
+        # Build selection list from all table items
+        item_names = {item["id"]: item["name"] for item in table_items}
+        item_labels = {item["id"]: f'{item["icon"]} {item["name"]}' for item in table_items}
+
+        selected_id = st.selectbox(
+            "Select item to examine:",
+            list(item_names.keys()),
+            format_func=lambda x: item_labels.get(x, x),
+            key="table_item_selector"
+        )
+
+        if selected_id:
+            st.session_state.selected_table_item = selected_id
+            add_to_list("examined_table_items", selected_id)
+
+            # Also track as examined_regions/specimens for secret triggers
+            selected_item = next((i for i in table_items if i["id"] == selected_id), None)
+            if selected_item:
+                # Map organs to examined_regions for secret compatibility
+                if selected_item["category"] == "organ":
+                    region_key = selected_item.get("region_key")
+                    if region_key:
+                        add_to_list("examined_regions", region_key)
+
+                # Map items to examined_specimens for secret compatibility
+                specimen_key = selected_item.get("specimen_key")
+                if specimen_key:
+                    add_to_list("examined_specimens", specimen_key)
+
+                # ── Render examination card ──
+                layer_tabs = st.tabs(["📋 Medical", "🔒 Hidden", "💭 Personal"])
+
+                with layer_tabs[0]:
+                    medical_text = selected_item.get("medical", "No medical notes available.")
+                    st.markdown(
+                        f'<div class="specimen-text">{medical_text}</div>',
+                        unsafe_allow_html=True
                     )
 
-                st.markdown(
-                    f'<div class="specimen-card">'
-                    f'<div class="specimen-title">{specimen["name"]}</div>'
-                    f'<div class="specimen-text">{specimen["description"]}</div>'
-                    f'{secret_html}'
-                    f'</div>',
-                    unsafe_allow_html=True
-                )
+                with layer_tabs[1]:
+                    lore_text = selected_item.get("lore", "Nothing hidden... yet.")
+                    # Only show if intensity >= 3
+                    if intensity >= 3:
+                        st.markdown(
+                            f'<div class="specimen-text" style="font-style: italic;">{lore_text}</div>',
+                            unsafe_allow_html=True
+                        )
+                    else:
+                        st.markdown(
+                            f'<div class="specimen-text" style="opacity:0.5;">'
+                            f'<em>Increase intensity to reveal hidden details...</em></div>',
+                            unsafe_allow_html=True
+                        )
+
+                with layer_tabs[2]:
+                    emotional_data = selected_item.get("emotional", {})
+                    if isinstance(emotional_data, dict):
+                        emotional_text = emotional_data.get(pov, emotional_data.get("observer", ""))
+                    else:
+                        emotional_text = emotional_data
+                    st.markdown(
+                        f'<div class="specimen-text">{emotional_text}</div>',
+                        unsafe_allow_html=True
+                    )
+
+                # UV reveal
+                if uv_on:
+                    uv_text = selected_item.get("uv_text", "")
+                    if uv_text:
+                        st.markdown(
+                            f'<div class="secret-reveal" style="border-color: #7b68ee; '
+                            f'background: linear-gradient(135deg, rgba(75,0,130,0.3), rgba(20,0,40,0.9));">'
+                            f'<strong style="color:#9370db;">🔮 UV Reveals:</strong><br><br>'
+                            f'<span style="color:#b8a9e8;">{uv_text}</span></div>',
+                            unsafe_allow_html=True
+                        )
 
 
 def render_3d_theatre(mode: str, intensity: int):
