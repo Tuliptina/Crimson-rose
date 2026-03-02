@@ -19,6 +19,7 @@ from content import (
     ANATOMY_REGIONS, SPECIMENS, SECRETS, DISSECTION_TABLE_ITEMS
 )
 from theatre_3d import get_theatre_3d
+from theatre_2d_svg import render_dissection_table_svg, render_item_detail_svg
 
 
 # =============================================================================
@@ -855,86 +856,35 @@ def render_dissection_table(pov: str, mode: str, intensity: int):
         uv_on = st.toggle("🔮 UV Lamp", value=st.session_state.uv_active, key="uv_toggle")
         st.session_state.uv_active = uv_on
 
-    # ── SVG Table (will be rendered by theatre_2d_svg.py in next phase) ──
-    # For now, placeholder that proves the tab works and state flows correctly
-    import streamlit.components.v1 as components
-
-    # Collect items for the table
+    # ── SVG Table rendered by theatre_2d_svg.py ──
+    # Collect items for the selection panel
     table_items = get_dissection_table_items()
-
-    # Item categories for the selection panel
-    organs = [i for i in table_items if i["category"] == "organ"]
-    instruments = [i for i in table_items if i["category"] == "instrument"]
-    details = [i for i in table_items if i["category"] == "detail"]
 
     # ── Layout: SVG left, examination panel right ──
     col_table, col_exam = st.columns([3, 2])
 
     with col_table:
-        # PLACEHOLDER: This will become the full interactive SVG
-        # rendered via components.html() from theatre_2d_svg.py
-        mode_colors = {
-            "gaslight": {"bg": "#2c1810", "marble": "#8a7d6b", "accent": "#d4a574", "channel": "#6b5a3e"},
-            "gothic": {"bg": "#1a0a0a", "marble": "#2a1a1a", "accent": "#8b0000", "channel": "#4a0000"},
-            "clinical": {"bg": "#f5f5f0", "marble": "#e8e4dc", "accent": "#2f4f4f", "channel": "#c0c0c0"},
-        }
-        c = mode_colors.get(mode, mode_colors["gaslight"])
-        uv_filter = ""
-        if uv_on:
-            uv_filter = f'''
-                <rect width="900" height="600" fill="rgba(20,0,60,0.85)" />
-                <text x="450" y="300" text-anchor="middle" fill="#7b68ee"
-                      font-size="18" font-family="serif" opacity="0.7">
-                    UV ACTIVE — Hidden marks revealed
-                </text>
-                <text x="450" y="340" text-anchor="middle" fill="#9370db"
-                      font-size="12" font-family="serif" font-style="italic" opacity="0.5">
-                    THE WARREN PROTOCOL CONTINUES
-                </text>
-            '''
+        # Get the currently selected item for highlight ring
+        current_selection = st.session_state.get("selected_table_item", None)
 
-        placeholder_svg = f'''
-        <svg viewBox="0 0 900 600" xmlns="http://www.w3.org/2000/svg"
-             style="width:100%; background:{c['bg']}; border-radius:4px;">
-            <!-- Table surface -->
-            <rect x="50" y="50" width="800" height="500" rx="8"
-                  fill="{c['marble']}" stroke="{c['accent']}" stroke-width="2" opacity="0.9"/>
-            <!-- Drainage channels -->
-            <line x1="150" y1="60" x2="150" y2="540" stroke="{c['channel']}" stroke-width="3" opacity="0.6"/>
-            <line x1="450" y1="60" x2="450" y2="540" stroke="{c['channel']}" stroke-width="3" opacity="0.6"/>
-            <line x1="750" y1="60" x2="750" y2="540" stroke="{c['channel']}" stroke-width="3" opacity="0.6"/>
-            <line x1="60" y1="300" x2="840" y2="300" stroke="{c['channel']}" stroke-width="2" opacity="0.4"/>
-            <!-- Region labels -->
-            <text x="250" y="180" text-anchor="middle" fill="{c['accent']}" font-size="14"
-                  font-family="serif" opacity="0.8">— ORGANS —</text>
-            <text x="650" y="180" text-anchor="middle" fill="{c['accent']}" font-size="14"
-                  font-family="serif" opacity="0.8">— INSTRUMENTS —</text>
-            <text x="450" y="450" text-anchor="middle" fill="{c['accent']}" font-size="14"
-                  font-family="serif" opacity="0.8">— PERSONAL EFFECTS —</text>
-            <!-- Organ placeholders -->
-            <text x="200" y="240" text-anchor="middle" fill="{c['accent']}" font-size="20" opacity="0.6">🫀</text>
-            <text x="300" y="240" text-anchor="middle" fill="{c['accent']}" font-size="20" opacity="0.6">🧠</text>
-            <text x="200" y="310" text-anchor="middle" fill="{c['accent']}" font-size="20" opacity="0.6">🫁</text>
-            <text x="300" y="310" text-anchor="middle" fill="{c['accent']}" font-size="20" opacity="0.6">👁️</text>
-            <text x="250" y="380" text-anchor="middle" fill="{c['accent']}" font-size="20" opacity="0.6">🦴</text>
-            <!-- Instrument placeholders -->
-            <text x="600" y="240" text-anchor="middle" fill="{c['accent']}" font-size="18" opacity="0.6">🪚</text>
-            <text x="700" y="240" text-anchor="middle" fill="{c['accent']}" font-size="18" opacity="0.6">🔪</text>
-            <text x="600" y="310" text-anchor="middle" fill="{c['accent']}" font-size="18" opacity="0.6">🪡</text>
-            <text x="700" y="310" text-anchor="middle" fill="{c['accent']}" font-size="18" opacity="0.6">🔍</text>
-            <!-- Detail placeholders -->
-            <text x="350" y="500" text-anchor="middle" fill="{c['accent']}" font-size="18" opacity="0.6">🕯️</text>
-            <text x="450" y="500" text-anchor="middle" fill="{c['accent']}" font-size="18" opacity="0.6">⌚</text>
-            <text x="550" y="500" text-anchor="middle" fill="{c['accent']}" font-size="18" opacity="0.6">🌹</text>
-            <!-- Waiting text -->
-            <text x="450" y="40" text-anchor="middle" fill="{c['accent']}" font-size="11"
-                  font-family="serif" font-style="italic" opacity="0.5">
-                Select an item below to examine — full SVG rendering coming soon
-            </text>
-            {uv_filter}
-        </svg>
-        '''
-        st.markdown(placeholder_svg, unsafe_allow_html=True)
+        # Render the full composed dissection table SVG (base64 encoded)
+        table_img = render_dissection_table_svg(
+            mode=mode,
+            uv=uv_on,
+            intensity=intensity,
+            selected_id=current_selection
+        )
+        st.markdown(table_img, unsafe_allow_html=True)
+
+        # Atmospheric caption
+        if uv_on:
+            st.caption("*🔮 Ultraviolet light reveals what was meant to stay hidden...*")
+        elif mode == "gothic":
+            st.caption("*The table breathes. The marble remembers every body it has held.*")
+        elif mode == "clinical":
+            st.caption("*Procedure #108. Standard thoracic examination. All instruments accounted for.*")
+        else:
+            st.caption("*Gaslight catches the steel. Shadows pool in the drainage channels.*")
 
     with col_exam:
         st.markdown("#### Examination")
@@ -967,6 +917,11 @@ def render_dissection_table(pov: str, mode: str, intensity: int):
                 specimen_key = selected_item.get("specimen_key")
                 if specimen_key:
                     add_to_list("examined_specimens", specimen_key)
+
+                # ── Render detail SVG thumbnail ──
+                detail_img = render_item_detail_svg(selected_id, mode, uv_on)
+                if detail_img:
+                    st.markdown(detail_img, unsafe_allow_html=True)
 
                 # ── Render examination card ──
                 layer_tabs = st.tabs(["📋 Medical", "🔒 Hidden", "💭 Personal"])
